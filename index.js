@@ -1,142 +1,97 @@
-const { Client, LocalAuth  } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require("express");
-const sequelize = require("./src/config/database.js");
 const {buscarHistorico} = require('./src/services/historicoChat.js');
-const { buscarHistoricoChat } = require('./src/services/enviarMensagens.js');
-const Atendimento = require('./src/models/atendimento.js');
+const client = require("./src/services/whatsappClient.js");
+const {gerarProtocolo} = require("./src/utils/gerarProtocolo.js");
+const atendimentoRoutes = require("./src/routes/atendimentoRoutes");
+const usuarioRoutes = require("./src/routes/usuarioRoutes");
+const authRoutes = require("./src/routes/authRoutes");
+const passport = require('passport');
+const rotasProtegida = require('./src/routes/protegidas.js');
+require('./src/config/passport')(passport);
+const { sequelize, Usuario, Atendimento } = require("./src/models");
+const cookieParser = require('cookie-parser');
 
-const crypto = require("crypto"); // Para gerar protocolos únicos
 
 const app = express();
-app.use(express.json()); // Permitir JSON no body das requisições
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-});
+app.use(require('cors')({
+    origin: 'http://localhost:3000',
+    credentials: true,
+}))
 
-const atendentes = {
-    'Dija': '557799756787', // Substitua pelo número correto do atendente
-};
+app.use(cookieParser());
+app.use(passport.initialize());
+app.use(express.json());
+app.use("/atendimentos", atendimentoRoutes);
+app.use("/usuarios", usuarioRoutes);
+app.use("/auth", authRoutes);
+app.use('/api', rotasProtegida); 
 
 client.on('qr', qr => {
     qrcode.generate(qr, { small: true });
 });
 
-
-let atendimentos = {}; // Armazena protocolos ativos
-
-const chatId = "55779@c.us"; // Número do contato
-
 client.on("ready", async () => {
     console.log("✅ Bot conectado!");
     
-
-    //buscarHistorico(client, chatId, 4);
+    //buscarHistorico(client, '558496590131@c.us', 10);
 
 });
 
-
-
 // Captura novas mensagens em tempo real
-client.on("message", async (message) => {
-    if (message.from.endsWith('@g.us')) {return}
+client.on("message_create", async (message) => {
+    if (
+        message.from.endsWith("@g.us") || 
+        message.from.endsWith("@broadcast") || 
+        message.from.endsWith("@newsletter") ||
+        message.type === 'e2e_notification'
+    ) {
+        return;
+    }
+
     const remetente = message.from;
+    const nomeCliente = await getNomeContato(remetente);
     const sender = message.fromMe ? "Você" : "Cliente";
     const date = new Date(message.timestamp * 1000).toLocaleString("pt-BR");
 
     const tipoMsg = verificarTipo(message);
 
-    console.log(`[${date}] ${sender=='Cliente'? message.from : sender}: ${tipoMsg}`);
+    console.log(`[${date}] ${sender=='Cliente'? nomeCliente : sender}: ${tipoMsg}`);
 
-    let atendimento = await Atendimento.findOne({ where: { cliente: remetente, data_fim: null } });
+    let atendimento = await Atendimento.findOne({ where: { numero: remetente, data_fim: null } });
 
-    
+    if (message.fromMe) {
+        return;
+    }
+
     //console.log(remetente);
 
     if (!atendimento) {
         const protocolo = gerarProtocolo();
-        atendimento = await Atendimento.create({ protocolo, cliente: remetente });
+        atendimento = await Atendimento.create({ protocolo, cliente: nomeCliente, numero:remetente });
 
         //substituir para remetente
         client.sendMessage('557798441226@c.us', `Olá! Seu protocolo de atendimento é: *${protocolo}*`);
+    }else{
+        //console.log("Atendimento já existe");
+        return;
     }
-
+    
     //console.log(`📩 Nova mensagem: ${message.body}`);
 });
 
-// Função para gerar um protocolo único
-const gerarProtocolo = () => {
-    return crypto.randomBytes(5).toString("hex").toUpperCase();
-};
 
-// Exemplo de uso do protocolo
-console.log("🔢 Protocolo gerado:", gerarProtocolo());
-
-// client.on('message', async message => {
-//     // Ignora mensagens de grupos
-//     if (message.from.endsWith('@g.us')) {
-//         console.log('📢 Mensagem de grupo ignorada:', message.from);
-//         return;
-//     }
-
-//     if (message.body.toLowerCase() === 'atendimento') {
-//         const atendenteNome = 'Dija';
-//         const atendenteNumero = atendentes[atendenteNome];
-//         let chatId = `${atendenteNumero}@c.us`;
-//         if (atendenteNumero) {
-//             console.log(`🔄 Transferindo atendimento para ${atendenteNome} (${atendenteNumero})`);
-
-//             // Responde ao cliente confirmando a transferência
-//             await message.reply(`Você foi transferido para *${atendenteNome}*, nosso atendente. Ele responderá em breve. 😊`);
-
-//             // Notifica o atendente sobre o novo atendimento
-//             const clienteNumero = message.from; // Número do cliente que pediu atendimento
-//             const mensagemAtendente = `🔔 *Novo atendimento!*\n👤 Cliente: *${clienteNumero}*\n💬 Mensagem: "${message.body}"`;
-
-//             try {
-//                 await client.sendMessage(chatId, mensagemAtendente);
-//                 console.log(`✅ Mensagem enviada para o atendente ${atendenteNome}`);
-//             } catch (error) {
-//                 console.error(`❌ Erro ao enviar mensagem para o atendente:`, error);
-//             }
-//         } else {
-//             console.log('⚠️ Nenhum atendente disponível.');
-//             await message.reply('No momento, não há atendentes disponíveis. Tente novamente mais tarde.');
-//         }
-//     }
-// });
-
-// Captura mensagens e gerencia atendimentos
-// client.on("message", async (msg) => {
-//     const remetente = msg.from;
-
-//     // Se for a primeira mensagem do cliente, criar um atendimento
-//     if (!atendimentos[remetente]) {
-//         const protocolo = gerarProtocolo();
-//         atendimentos[remetente] = protocolo;
-
-//         await pool.query(
-//             "INSERT INTO atendimentos (protocolo, cliente) VALUES ($1, $2) RETURNING id",
-//             [protocolo, remetente]
-//         );
-
-//         client.sendMessage(
-//             remetente,
-//             `Seu atendimento foi iniciado! Protocolo: *${protocolo}*`
-//         );
-//     }
-
-//     // Salvar a mensagem no banco
-//     const protocolo = atendimentos[remetente];
-
-//     await pool.query(
-//         "INSERT INTO mensagens (atendimento_id, remetente, mensagem) VALUES ((SELECT id FROM atendimentos WHERE protocolo = $1), $2, $3)",
-//         [protocolo, remetente, msg.body]
-//     );
-
-//     console.log(`Mensagem salva: ${msg.body} (Protocolo: ${protocolo})`);
-// });
+// Função para obter o nome do contato salvo
+async function getNomeContato(numero) {
+    try {
+        const contato = await client.getContactById(numero);
+        return contato.pushname || contato.name || numero; // Retorna o nome salvo ou o número se não houver nome
+    } catch (error) {
+        console.error(`Erro ao obter nome do contato: ${error}`);
+        return numero; // Retorna o número caso haja erro
+    }
+}
 
 
 function verificarTipo(msg) {
@@ -157,9 +112,9 @@ function verificarTipo(msg) {
 client.initialize();
 
 // Sincronizar com o banco
-sequelize.sync({ alter: true })
+sequelize.sync({})
     .then(() => console.log("Tabelas sincronizadas com o banco!"))
     .catch(err => console.error("Erro ao sincronizar tabelas:", err));
 
-app.listen(3000, () => console.log("Servidor rodando na porta 3000"));
+app.listen(3001, () => console.log("Servidor rodando na porta 3001"));
 
