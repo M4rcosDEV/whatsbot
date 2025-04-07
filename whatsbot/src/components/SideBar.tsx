@@ -13,7 +13,8 @@ import {
   MoreVertical,
   SquarePlus,
   Building2,
-  LayoutGrid
+  LayoutGrid,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,16 +38,18 @@ type Usuario = {
 const SidebarContext = createContext({ expanded: true });
 
 export default function Sidebar() {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   useEffect(() => {
     api.get("/usuarios/me")
       .then((res) => {
         const dados = res.data as Usuario;
+        console.log('Autenticado:', res.data)
         setUsuario(dados);
       })
       .catch((err) => {
+        console.log('Erro 401?', err.response?.status === 401);
         console.error("Erro ao buscar atendimentos:", err);
       });
   }, []);
@@ -86,12 +89,13 @@ export default function Sidebar() {
 
         {/* Rodapé */}
         <div className="border-t border-blue-400 flex p-3">
-        <Image
+          <LogOut />
+        {/* <Image
           src="/icons/whats.png"
           alt="Logo"
           width={45} // 32 x 4 = 128px (corresponde ao Tailwind w-32)
           height={45}
-        />
+        /> */}
         {/* <Image src={profile} alt="Perfil" className="w-10 h-10 rounded-md" /> */}
           <div
             className={`flex justify-between items-center overflow-hidden transition-all ${

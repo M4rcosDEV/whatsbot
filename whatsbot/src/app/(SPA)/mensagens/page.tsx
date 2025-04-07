@@ -61,14 +61,20 @@ export default function Page() {
       {/* Conteúdo principal */}
       <div className="flex flex-1 overflow-hidden">
         {/* Painel de atendimentos */}
-        <div className="w-full sm:w-[200px] md:w-[300px] lg:w-[400px] xl:w-[600px] p-4 overflow-y-auto">
+        <div className="w-full sm:w-[200px] md:w-[300px] lg:w-[400px] xl:w-[600px] p-4 overflow-y-auto ">
           <Atendimentos />
         </div>
   
         {/* Chat */}
-        <div className="hidden sm:block flex-1 overflow-y-auto p-4">
-          <Chats />
-        </div>
+        <div
+  className="hidden sm:block flex-1 h-screen p-4 bg-repeat"
+  style={{
+    backgroundImage: "url('https://static.whatsapp.net/rsrc.php/v4/yl/r/gi_DckOUM5a.png')",
+    backgroundSize: 'auto'
+  }}
+>
+  <Chats />
+</div>
       </div>
     </div>
   );

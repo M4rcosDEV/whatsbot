@@ -107,7 +107,8 @@ export default function Atendimentos() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto  rounded-t-xl bg-stone-200">
+    <div className="m-0 bg-stone-200 pb-3 rounded-md">
+    <div className="max-w-4xl mx-auto  rounded-t-xl ">
       {/* Abas */}
       <div className="flex rounded-t-xl p-1 gap-1 ">
         {tabs.map((tab) => (
@@ -139,12 +140,12 @@ export default function Atendimentos() {
           {atendimentos[abaAtiva].map((item) => (
             <div
               key={item.id}
-              className="flex items-start bg-white shadow rounded-lg p-4 gap-4 "
+              className="flex items-center bg-white shadow rounded-lg p-4 gap-4"
             >
               <img
-                src={item.avatar || "https://via.placeholder.com/50"}
+                src={item.avatar || "/icons/avatar.png"}
                 alt="Avatar"
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-12 h-12 rounded-full object-cover "
               />
               <div>
                 <h4 className="font-semibold text-base mb-1">
@@ -181,5 +182,6 @@ export default function Atendimentos() {
         </motion.div>
       </AnimatePresence>
     </div>
+  </div>
   );
 }
