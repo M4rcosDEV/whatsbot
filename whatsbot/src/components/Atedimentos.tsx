@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from '@/lib/api';
+import socket from '@/lib/socket';
+
 
 type Atendimento = {
   id: number;
@@ -58,19 +60,46 @@ export default function Atendimentos() {
   }, []);
 
   useEffect(() => {
+    // Busca inicial dos atendimentos
     api.get("/atendimentos")
       .then((res) => {
         const dados = res.data as Atendimento[];
-
+  
         const abertas = dados.filter((item) => item.data_fim === null);
         const fechadas = dados.filter((item) => item.data_fim !== null);
-
+  
         setAtendimentos({ abertas, fechadas });
       })
       .catch((err) => {
         console.error("Erro ao buscar atendimentos:", err);
       });
+  
+    // Listener do socket
+    const atualizarAtendimentos = () => {
+      console.log("📩 Novo atendimento recebido via socket");
+  
+      api.get("/atendimentos")
+        .then((res) => {
+          const dados = res.data as Atendimento[];
+  
+          const abertas = dados.filter((item) => item.data_fim === null);
+          const fechadas = dados.filter((item) => item.data_fim !== null);
+  
+          setAtendimentos({ abertas, fechadas });
+        })
+        .catch((err) => {
+          console.error("Erro ao atualizar atendimentos:", err);
+        });
+    };
+  
+    socket.on("novo-atendimento", atualizarAtendimentos);
+  
+    // Remove listener quando desmonta o componente
+    return () => {
+      socket.off("novo-atendimento", atualizarAtendimentos);
+    };
   }, []);
+  
 
   const tabs = [
     { id: "abertas", label: "Em aberto" },

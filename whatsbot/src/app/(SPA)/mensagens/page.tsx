@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import api from '@/lib/api';
 import { Poppins } from 'next/font/google'
 
+
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['400', '700'],
@@ -60,12 +61,12 @@ export default function Page() {
       {/* Conteúdo principal */}
       <div className="flex flex-1 overflow-hidden">
         {/* Painel de atendimentos */}
-        <div className="w-[600px] p-4 overflow-y-auto">
+        <div className="w-full sm:w-[200px] md:w-[300px] lg:w-[400px] xl:w-[600px] p-4 overflow-y-auto">
           <Atendimentos />
         </div>
   
         {/* Chat */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="hidden sm:block flex-1 overflow-y-auto p-4">
           <Chats />
         </div>
       </div>

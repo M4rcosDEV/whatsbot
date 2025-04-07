@@ -11,7 +11,8 @@ const rotasProtegida = require('./src/routes/protegidas.js');
 require('./src/config/passport')(passport);
 const { sequelize, Usuario, Atendimento } = require("./src/models");
 const cookieParser = require('cookie-parser');
-
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 
@@ -27,6 +28,27 @@ app.use("/atendimentos", atendimentoRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/auth", authRoutes);
 app.use('/api', rotasProtegida); 
+
+// Cria o servidor HTTP a partir do app Express
+const server = http.createServer(app);
+
+// CORS para WebSocket (Socket.IO)
+const io = new Server(server, {
+    cors: {
+      origin: "http://localhost:3000",
+      credentials: true,
+    },
+  });
+
+  // Lógica do Socket.IO aqui (exemplo)
+io.on("connection", (socket) => {
+    console.log("🔥 Novo cliente conectado via socket:", socket.id);
+  
+    socket.on("disconnect", () => {
+      console.log("❌ Cliente desconectado:", socket.id);
+    });
+});
+
 
 client.on('qr', qr => {
     qrcode.generate(qr, { small: true });
@@ -73,6 +95,14 @@ client.on("message_create", async (message) => {
 
         //substituir para remetente
         client.sendMessage('557798441226@c.us', `Olá! Seu protocolo de atendimento é: *${protocolo}*`);
+        // Emite evento de socket pro frontend
+        io.emit("novo-atendimento", {
+            id: atendimento.id,
+            cliente: atendimento.cliente,
+            numero: atendimento.numero,
+            protocolo: atendimento.protocolo,
+            data_inicio: atendimento.data_inicio,
+        });
     }else{
         //console.log("Atendimento já existe");
         return;
@@ -116,5 +146,7 @@ sequelize.sync({})
     .then(() => console.log("Tabelas sincronizadas com o banco!"))
     .catch(err => console.error("Erro ao sincronizar tabelas:", err));
 
-app.listen(3001, () => console.log("Servidor rodando na porta 3001"));
+server.listen(3001, () => {
+    console.log("Servidor rodando na porta 3001");
+});
 
