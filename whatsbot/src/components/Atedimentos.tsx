@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from '@/lib/api';
 import socket from '@/lib/socket';
+import { useRouter } from 'next/navigation';
+
 
 
 type Atendimento = {
@@ -42,7 +44,10 @@ function calcularDuracao(dataInicio: string, dataFim: string): string {
   
 
 export default function Atendimentos() {
+  const router = useRouter();
   const [abaAtiva, setAbaAtiva] = useState<keyof AtendimentosPorStatus>("abertas");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedAtendimento, setSelectedAtendimento] = useState<Atendimento | null>(null);
   const [atendimentos, setAtendimentos] = useState<AtendimentosPorStatus>({
     abertas: [],
     fechadas: []
@@ -99,8 +104,16 @@ export default function Atendimentos() {
       socket.off("novo-atendimento", atualizarAtendimentos);
     };
   }, []);
-  
 
+  const handleSelecionarAtendimento = async (item: Atendimento) => {
+    try {
+      await api.put(`/atendimentos/${item.id}/iniciar`);
+      setSelectedAtendimento(item); // Seleciona atendimento
+      setSelectedId(item.id);       // Para destacar no visual
+    } catch (error) {
+      console.error("Erro ao iniciar atendimento:", error);
+    }
+  };
   const tabs = [
     { id: "abertas", label: "Em aberto" },
     { id: "fechadas", label: "Fechadas" },
@@ -138,10 +151,13 @@ export default function Atendimentos() {
           className="max-h-[70vh] overflow-y-auto p-2 space-y-4 custom-scroll"
         >
           {atendimentos[abaAtiva].map((item) => (
-            <div
+              <div
               key={item.id}
-              className="flex items-center bg-white shadow rounded-lg p-4 gap-4"
-            >
+              onClick={() => handleSelecionarAtendimento(item)}
+              className={`flex items-center cursor-pointer bg-white shadow rounded-lg p-4 gap-4 transition-colors ${
+                selectedId === item.id ? 'bg-blue-100 border border-blue-400' : ''
+              }`}
+            > 
               <img
                 src={item.avatar || "/icons/avatar.png"}
                 alt="Avatar"

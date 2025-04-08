@@ -40,8 +40,10 @@ async function iniciarAtendimento(req, res) {
             await client.sendMessage(`557798441226@c.us`, mensagem);
         }
         
-        const numero = atendimento.numero;
-        const historico = await buscarHistorico(client, numero, 20);
+        const numero_cliente = atendimento.numero;
+        const historico = await buscarHistorico(client, numero_cliente, 20);
+        console.log(numero)
+        console.log(historico)
         
         return res.status(200).json({ mensagem: 'Atendimento iniciado com sucesso',
             atendimento : atendimento,
