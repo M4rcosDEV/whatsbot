@@ -4,13 +4,16 @@ import Atendimentos from "@/components/Atedimentos";
 import Chats from "@/components/Chats";
 import { useEffect, useState } from "react";
 import api from '@/lib/api';
+import { eventBus } from "@/lib/eventBus"
 import { Poppins } from 'next/font/google'
-
+import { Atendimento } from '@/types/Atendimento';
 
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['400', '700'],
 });
+
+
 
 type Atendentes = {
   id: number,
@@ -20,18 +23,39 @@ type Atendentes = {
 
 export default function Page() {
   const [atendentes, setAtendentes] = useState<Atendentes[]>([]);
+  const [atendimentosSelecionados, setAtendimentosSelecionados] = useState<Atendimento[]>([]);
 
+
+  const handleSelecionar = (novo: Atendimento) => {
+    setAtendimentosSelecionados((prev) => {
+      const jaExiste = prev.find((a) => a.id === novo.id);
+      if (jaExiste) return prev;
+      return [...prev, novo];
+    });
+  };
+  
+  
   useEffect(() => {
-    api.get("/usuarios/status")
-      .then((res) => {
-        const dados = res.data as Atendentes[];
-        setAtendentes(dados);
-        
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar atendimentos:", err);
-      });
-  }, []);
+    const atualizarAtendentes = () => {
+      api.get("/usuarios/status")
+        .then((res) => {
+          const dados = res.data as Atendentes[]
+          setAtendentes(dados)
+        })
+        .catch((err) => {
+          console.error("Erro ao buscar atendentes:", err)
+        })
+    }
+  
+    atualizarAtendentes() // carrega inicialmente
+  
+    eventBus.on("atendimentoIniciado", atualizarAtendentes)
+  
+    return () => {
+      eventBus.off("atendimentoIniciado", atualizarAtendentes)
+    }
+  }, [])
+  
   
   return (
     <div className={`flex flex-col h-screen ${poppins.className}`}>
@@ -62,19 +86,23 @@ export default function Page() {
       <div className="flex flex-1 overflow-hidden">
         {/* Painel de atendimentos */}
         <div className="w-full sm:w-[200px] md:w-[300px] lg:w-[400px] xl:w-[600px] p-4 overflow-y-auto ">
-          <Atendimentos />
+          <Atendimentos onSelect={handleSelecionar}/>
         </div>
   
         {/* Chat */}
         <div
-  className="hidden sm:block flex-1 h-screen p-4 bg-repeat"
-  style={{
-    backgroundImage: "url('https://static.whatsapp.net/rsrc.php/v4/yl/r/gi_DckOUM5a.png')",
-    backgroundSize: 'auto'
-  }}
->
-  <Chats />
-</div>
+          className="hidden sm:block flex-1 h-screen p-4 bg-repeat"
+          style={{
+            backgroundImage: "url('https://static.whatsapp.net/rsrc.php/v4/yl/r/gi_DckOUM5a.png')",
+            backgroundSize: 'auto'
+          }}
+        >
+          {atendimentosSelecionados.map((atendimento) => (
+          <div key={atendimento.id} className="bg-white rounded shadow p-4 min-w-[300px]">
+            <Chats atendimento={atendimento} />
+          </div>
+        ))}
+        </div>
       </div>
     </div>
   );

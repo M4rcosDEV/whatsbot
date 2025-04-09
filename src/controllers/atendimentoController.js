@@ -13,6 +13,9 @@ async function listarAtendimentos(req, res) {
 async function iniciarAtendimento(req, res) {
     const atendimentoId = req.params.id;
     const usuarioId = req.user.id; 
+    console.log("Params:", req.params);
+    console.log("Body:", req.body);
+
 
     try {
         const atendimento = await Atendimento.findByPk(atendimentoId);
@@ -42,7 +45,7 @@ async function iniciarAtendimento(req, res) {
         
         const numero_cliente = atendimento.numero;
         const historico = await buscarHistorico(client, numero_cliente, 20);
-        console.log(numero)
+        console.log(numero_cliente)
         console.log(historico)
         
         return res.status(200).json({ mensagem: 'Atendimento iniciado com sucesso',

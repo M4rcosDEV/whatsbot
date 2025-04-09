@@ -4,18 +4,14 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from '@/lib/api';
 import socket from '@/lib/socket';
-import { useRouter } from 'next/navigation';
+import { eventBus } from "@/lib/eventBus";
+import Image from 'next/image'
+
+import { Atendimento } from '@/types/Atendimento';
 
 
-
-type Atendimento = {
-  id: number;
-  cliente: string;
-  numero: string;
-  protocolo: string;
-  data_inicio: string;
-  data_fim: string | null;
-  avatar?: string;
+type Props = {
+  onSelect: (atendimento: Atendimento) => void;
 };
 
 type AtendimentosPorStatus = {
@@ -43,10 +39,10 @@ function calcularDuracao(dataInicio: string, dataFim: string): string {
   }
   
 
-export default function Atendimentos() {
-  const router = useRouter();
+export default function Atendimentos({ onSelect }: Props) {
   const [abaAtiva, setAbaAtiva] = useState<keyof AtendimentosPorStatus>("abertas");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedAtendimento, setSelectedAtendimento] = useState<Atendimento | null>(null);
   const [atendimentos, setAtendimentos] = useState<AtendimentosPorStatus>({
     abertas: [],
@@ -106,14 +102,18 @@ export default function Atendimentos() {
   }, []);
 
   const handleSelecionarAtendimento = async (item: Atendimento) => {
+    
     try {
       await api.put(`/atendimentos/${item.id}/iniciar`);
       setSelectedAtendimento(item); // Seleciona atendimento
       setSelectedId(item.id);       // Para destacar no visual
+      onSelect(item);
+      eventBus.emit('atendimentoIniciado')
     } catch (error) {
       console.error("Erro ao iniciar atendimento:", error);
     }
   };
+  
   const tabs = [
     { id: "abertas", label: "Em aberto" },
     { id: "fechadas", label: "Fechadas" },
@@ -158,11 +158,13 @@ export default function Atendimentos() {
                 selectedId === item.id ? 'bg-blue-100 border border-blue-400' : ''
               }`}
             > 
-              <img
-                src={item.avatar || "/icons/avatar.png"}
-                alt="Avatar"
-                className="w-12 h-12 rounded-full object-cover "
-              />
+            <Image
+              src={item.avatar || "/icons/avatar.png"}
+              alt="Avatar"
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-full object-cover"
+            />
               <div>
                 <h4 className="font-semibold text-base mb-1">
                   {item.cliente || item.numero}

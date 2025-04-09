@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [erro, setErro] = useState('');
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
@@ -31,7 +31,7 @@ export default function LoginPage() {
 
       // Se você usa cookie httpOnly, não precisa salvar nada manualmente aqui
       router.push('/usuarios');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao logar:', err);
       setErro('Email ou senha inválidos');
     }

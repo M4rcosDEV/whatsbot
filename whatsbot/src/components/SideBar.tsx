@@ -6,10 +6,7 @@ import {
   Home,
   MessageCircle,
   Settings,
-  Users,
   Menu,
-  ChevronFirst,
-  ChevronLast,
   MoreVertical,
   SquarePlus,
   Building2,
@@ -19,8 +16,6 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import Image from "next/image";
-import logo from "../assets/logo.png";
 //import profile from "../assets/profile.png";
 import { Poppins } from 'next/font/google'
 
