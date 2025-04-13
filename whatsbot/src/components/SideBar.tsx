@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter } from 'next/navigation';
 //import profile from "../assets/profile.png";
 import { Poppins } from 'next/font/google'
 
@@ -35,6 +36,7 @@ const SidebarContext = createContext({ expanded: true });
 export default function Sidebar() {
   const [expanded, setExpanded] = useState(false);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     api.get("/usuarios/me")
@@ -48,6 +50,10 @@ export default function Sidebar() {
         console.error("Erro ao buscar atendimentos:", err);
       });
   }, []);
+
+  const handleLogout = () => {
+    console.log('Fez logout')
+  }
 
   return (
     <aside className={`h-screen ${poppins.className} `}>
@@ -84,21 +90,14 @@ export default function Sidebar() {
 
         {/* Rodapé */}
         <div className="border-t border-blue-400 flex p-3">
-          <LogOut />
-        {/* <Image
-          src="/icons/whats.png"
-          alt="Logo"
-          width={45} // 32 x 4 = 128px (corresponde ao Tailwind w-32)
-          height={45}
-        /> */}
-        {/* <Image src={profile} alt="Perfil" className="w-10 h-10 rounded-md" /> */}
+          <LogOut className='hover:text-red-500' onClick={handleLogout}/>
           <div
             className={`flex justify-between items-center overflow-hidden transition-all ${
               expanded ? "w-52 ml-3" : "w-0"
             }`}
           >
             <div className="leading-4">
-              <h4 className="font-semibold">{usuario?.nome}</h4>
+              <h4 className="text-xs font-semibold">{usuario?.nome}</h4>
               <span className="text-xs text-white/80">{usuario?.email}</span>
             </div>
             <MoreVertical size={20} />
