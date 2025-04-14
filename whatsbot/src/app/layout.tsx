@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SocketProvider from '@/components/SocketProvider';
 
 export const metadata: Metadata = {
   title: 'Whatsbot',
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="flex">
-        <main className="flex-1">{children}</main>
+        <SocketProvider>
+          <main className="flex-1">{children}</main>
+        </SocketProvider>
       </body>
     </html>
   );

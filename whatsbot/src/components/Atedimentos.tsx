@@ -48,7 +48,7 @@ export default function Atendimentos({ onSelect }: Props) {
     abertas: [],
     fechadas: []
   });
-
+  console.log(atendimentos);
   const [agora, setAgora] = useState(new Date());
 
   // Atualiza o "agora" a cada minuto
@@ -102,17 +102,22 @@ export default function Atendimentos({ onSelect }: Props) {
   }, []);
 
   const handleSelecionarAtendimento = async (item: Atendimento) => {
-    
     try {
-      await api.put(`/atendimentos/${item.id}/iniciar`);
-      setSelectedAtendimento(item); // Seleciona atendimento
-      setSelectedId(item.id);       // Para destacar no visual
-      onSelect(item);
-      eventBus.emit('atendimentoIniciado')
+      const result = await api.get(`/atendimentos/${item.id}/historico`);
+      const historico = result.data.historico;
+  
+      const itemComHistorico = { ...item, historico };
+  
+      setSelectedAtendimento(itemComHistorico);
+      setSelectedId(item.id);
+      onSelect(itemComHistorico);
+  
+      eventBus.emit('atendimentoIniciado');
     } catch (error) {
       console.error("Erro ao iniciar atendimento:", error);
     }
   };
+  
   
   const tabs = [
     { id: "abertas", label: "Em aberto" },
@@ -183,9 +188,16 @@ export default function Atendimentos({ onSelect }: Props) {
                   Caso deseje, pode descrever seu problema abaixo para agilizar seu atendimento.
                 </p>
                 {abaAtiva === "abertas" ? (
-                <p className="text-xs text-gray-500 mt-1">
-                    Tempo em espera: {calcularTempoEspera(item.data_inicio, agora)}
-                </p>
+                  <>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tempo em espera: {calcularTempoEspera(item.data_inicio, agora)}
+                    </p>
+                    {item.usuario && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        <strong>{item.usuario.nome}</strong> está realizando este atendimento.
+                      </p>
+                    )}
+                  </>
                 ) : (
                 item.data_fim && (
                     <p className="text-xs text-gray-500 mt-1">
@@ -193,7 +205,6 @@ export default function Atendimentos({ onSelect }: Props) {
                     </p>
                 )
                 )}
-
               </div>
             </div>
           ))}

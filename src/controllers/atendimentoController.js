@@ -1,13 +1,25 @@
 const { Atendimento, Usuario } = require("../models");
 const {buscarHistorico} = require('../services/historicoChat.js');
+const {enviarMensagens} = require('../services/enviarMensagens.js');
 const client = require("../services/whatsappClient.js");
 
 async function listarAtendimentos(req, res) {
-    const atendimentos = await Atendimento.findAll({
-        // where: { data_fim: null },
-        order: [["updatedAt", "DESC"]]
-    });
-    res.json(atendimentos);
+    try {
+        const atendimentos = await Atendimento.findAll({
+            order: [["updatedAt", "DESC"]],
+            include: [
+                {
+                    model: Usuario,
+                    as: 'usuario',
+                    attributes: ['id', 'nome'],
+                }
+            ]
+        });
+        res.json(atendimentos);
+    } catch (error) {
+        console.error('Erro ao listar atendimentos:', error);
+        res.status(500).json({ erro: 'Erro ao buscar atendimentos' });
+    }
 }
 
 async function iniciarAtendimento(req, res) {
@@ -40,7 +52,7 @@ async function iniciarAtendimento(req, res) {
             const mensagem = `Olá! Meu nome é ${usuario.nome} e estou assumindo seu atendimento.`;
             
             //substituir numero pelo numero do cliente
-            await client.sendMessage(`557798441226@c.us`, mensagem);
+            await client.sendMessage(`13135550002@c.us`, mensagem);
         }
         
         const numero_cliente = atendimento.numero;
@@ -140,10 +152,60 @@ async function encerrar(req, res) {
     }
 }
 
+async function buscarHistoricoAtendimento(req, res) {
+    const atendimentoId = req.params.id_atendimento;
+    //console.log(req.params)
+    //console.log(`ID:  ${atendimentoId}`);
+    try {
+        const atendimento = await Atendimento.findByPk(atendimentoId);
+        //console.log(`Buscando histórico de atendimento para ${atendimento}`);
+        //console.log(`numero ${atendimento.numero}`);
+        if (!atendimento) {
+            return res.status(404).json({ mensagem: "Atendimento não encontrado" });
+        }
+
+        const numero_cliente = atendimento.numero
+        const historico = await buscarHistorico(client, numero_cliente, 20);
+        //  console.log(`Histórico de atendimento para ${historico}`);
+        return res.status(200).json({
+            historico : historico
+         });
+    } catch (error) {
+        console.error('Erro ao buscar histórico de atendimento:', error);
+        return res.status(500).json({ mensagem: 'Erro interno ao buscar histórico de atendimento', descrição: error.message });
+    }
+}
+
+async function enviarMensagensCliente(req, res) {
+    const atendimentoId = req.params.id_atendimento;
+    const mensagem = req.body.mensagem;
+    try {
+        const atendimento = await Atendimento.findByPk(atendimentoId);
+        //console.log(`Buscando histórico de atendimento para ${atendimento}`);
+        //console.log(`numero ${atendimento.numero}`);
+        if (!atendimento) {
+            return res.status(404).json({ mensagem: "Atendimento não encontrado" });
+        }
+
+        const numero_cliente = atendimento.numero
+
+        const enviarMsg = await enviarMensagens(client, numero_cliente, mensagem);
+        
+        return res.status(200).json({
+            mensagem : mensagem
+         });
+    } catch (error) {
+        console.error('Erro ao enviar mensagem para cliente:', error);
+        return res.status(500).json({ mensagem: 'Erro interno ao enviar mensagem para client', descrição: error.message });
+    }
+}
+
 module.exports = {
     listarAtendimentos,
     iniciarAtendimento,
     transferirAtendimento,
     buscarMidiaDownload,
-    encerrar
+    encerrar,
+    buscarHistoricoAtendimento,
+    enviarMensagensCliente
 };

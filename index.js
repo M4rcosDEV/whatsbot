@@ -43,6 +43,16 @@ const io = new Server(server, {
   // Lógica do Socket.IO aqui (exemplo)
 io.on("connection", (socket) => {
     console.log("🔥 Novo cliente conectado via socket:", socket.id);
+
+    socket.on("entrarSala", (salaId) => {
+        socket.join(salaId);
+        console.log(`📥 Socket ${socket.id} entrou na sala ${salaId}`);
+      });
+    
+      socket.on("sairSala", (salaId) => {
+        socket.leave(salaId);
+        console.log(`📤 Socket ${socket.id} saiu da sala ${salaId}`);
+      });
   
     socket.on("disconnect", () => {
       console.log("❌ Cliente desconectado:", socket.id);
@@ -72,24 +82,18 @@ client.on("message_create", async (message) => {
         return;
     }
 
-    const remetente = message.from;
+    const remetente = message.fromMe ? message.to : message.from;
     const nomeCliente = await getNomeContato(remetente);
-    const sender = message.fromMe ? "Você" : "Cliente";
-    const date = new Date(message.timestamp * 1000).toLocaleString("pt-BR");
+    //const sender = message.fromMe ? "Você" : "Cliente";
+    //const date = new Date(message.timestamp * 1000).toLocaleString("pt-BR");
 
     const tipoMsg = verificarTipo(message);
-
-    console.log(`[${date}] ${sender=='Cliente'? nomeCliente : sender}: ${tipoMsg}`);
+    //console.log(message);
+    //console.log(`[${date}] ${sender=='Cliente'? nomeCliente : sender}: ${tipoMsg}`);
 
     let atendimento = await Atendimento.findOne({ where: { numero: remetente, data_fim: null } });
 
-    if (message.fromMe) {
-        return;
-    }
-
-    //console.log(remetente);
-
-    if (!atendimento) {
+    if (!atendimento && !message.fromMe) {
         const protocolo = gerarProtocolo();
         atendimento = await Atendimento.create({ protocolo, cliente: nomeCliente, numero:remetente });
 
@@ -103,12 +107,29 @@ client.on("message_create", async (message) => {
             protocolo: atendimento.protocolo,
             data_inicio: atendimento.data_inicio,
         });
-    }else{
-        //console.log("Atendimento já existe");
-        return;
+    }
+
+    if (!atendimento) return;
+
+    const novaMensagem = {
+        de: message.fromMe ? "atendente" : "cliente",
+        tipo: message.type,
+        timestamp: message.timestamp,
+    };
+
+    if (message.hasMedia) {
+        novaMensagem.conteudo = {
+            id: message.id.id,
+            mimetype: message.mimetype,
+            filename: message.filename || "arquivo",
+            hasMedia: true
+        };
+    } else {
+        novaMensagem.conteudo = message.body;
     }
     
-    //console.log(`📩 Nova mensagem: ${message.body}`);
+    console.log("🔊 Emitindo nova mensagem para sala:", `atendimento_${atendimento.id}`);
+    io.to(`atendimento_${atendimento.id}`).emit("novaMensagem", novaMensagem);  
 });
 
 

@@ -51,3 +51,7 @@ html *::-webkit-scrollbar-thumb {
 .abinha {
   clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 100%, 0% 100%); 
 }
+
+.aba{
+  clip-path: polygon(0 0, 90% 0, 100% 100%, 0 100%);
+}
