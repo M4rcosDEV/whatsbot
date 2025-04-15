@@ -140,7 +140,7 @@ export default function Page() {
         {/* Área principal com abas e chat */}
         <div className="flex flex-col flex-1 ">
           {/* Abas horizontais */}
-          <div className="flex flex-wrap gap-2 p-2 border-gray-700 bg-gray-100 overflow-x-auto shadow sticky ">
+          <div className="flex flex-wrap gap-2 p-1 border-gray-700 bg-gray-100 overflow-x-auto shadow sticky ">
             {atendimentosSelecionados.map((item) => (
               <div
                 key={item.id}

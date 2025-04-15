@@ -1,10 +1,8 @@
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow">
+    <div className="min-h-screen bg-[url('/bg-hex.png')] bg-cover bg-center flex items-center justify-center">
+      {/* Cartão central com fundo escuro translúcido */}
         {children}
-      </div>
     </div>
   );
-  }
-  
+}

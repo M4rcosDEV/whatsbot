@@ -48,7 +48,7 @@ export default function Atendimentos({ onSelect }: Props) {
     abertas: [],
     fechadas: []
   });
-  console.log(atendimentos);
+  
   const [agora, setAgora] = useState(new Date());
 
   // Atualiza o "agora" a cada minuto
@@ -155,59 +155,69 @@ export default function Atendimentos({ onSelect }: Props) {
           transition={{ duration: 0.2 }}
           className="max-h-[70vh] overflow-y-auto p-2 space-y-4 custom-scroll"
         >
-          {atendimentos[abaAtiva].map((item) => (
+          {atendimentos[abaAtiva]?.length > 0 ? (
+            atendimentos[abaAtiva].map((item) => (
               <div
-              key={item.id}
-              onClick={() => handleSelecionarAtendimento(item)}
-              className={`flex items-center cursor-pointer bg-white shadow rounded-lg p-4 gap-4 transition-colors ${
-                selectedId === item.id ? 'bg-blue-100 border border-blue-400' : ''
-              }`}
-            > 
-            <Image
-              src={item.avatar || "/icons/avatar.png"}
-              alt="Avatar"
-              width={48}
-              height={48}
-              className="w-12 h-12 rounded-full object-cover"
-            />
-              <div>
-                <h4 className="font-semibold text-base mb-1">
-                  {item.cliente || item.numero}
-                </h4>
-                <p className="text-sm text-gray-700">
-                  Olá, seu protocolo de atendimento é:{" "}
-                  <a
-                    href="#"
-                    className="text-blue-600 font-semibold hover:underline"
-                  >
-                    {item.protocolo}
-                  </a>
-                  <br />
-                  Aguarde um momento, um de nossos técnicos irá lhe atender assim que possível.
-                  <br />
-                  Caso deseje, pode descrever seu problema abaixo para agilizar seu atendimento.
-                </p>
-                {abaAtiva === "abertas" ? (
-                  <>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Tempo em espera: {calcularTempoEspera(item.data_inicio, agora)}
-                    </p>
-                    {item.usuario && (
-                      <p className="text-xs text-blue-600 mt-1">
-                        <strong>{item.usuario.nome}</strong> está realizando este atendimento.
+                key={item.id}
+                onClick={() => handleSelecionarAtendimento(item)}
+                className={`flex items-center cursor-pointer bg-white shadow rounded-lg p-4 gap-4 transition-colors ${
+                  selectedId === item.id ? 'bg-blue-100 border border-blue-400' : ''
+                }`}
+              > 
+                <Image
+                  src={item.avatar || "/icons/avatar.png"}
+                  alt="Avatar"
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+                <div>
+                  <h4 className="font-semibold text-base mb-1">
+                    {item.cliente || item.numero}
+                  </h4>
+                  <p className="text-sm text-gray-700">
+                    Olá, seu protocolo de atendimento é:{" "}
+                    <a
+                      href="#"
+                      className="text-blue-600 font-semibold hover:underline"
+                    >
+                      {item.protocolo}
+                    </a>
+                    <br />
+                    Aguarde um momento, um de nossos técnicos irá lhe atender assim que possível.
+                    <br />
+                    Caso deseje, pode descrever seu problema abaixo para agilizar seu atendimento.
+                  </p>
+
+                  {abaAtiva === "abertas" ? (
+                    <>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Tempo em espera: {calcularTempoEspera(item.data_inicio, agora)}
                       </p>
-                    )}
-                  </>
-                ) : (
-                item.data_fim && (
-                    <p className="text-xs text-gray-500 mt-1">
-                    Duração do atendimento: {calcularDuracao(item.data_inicio, item.data_fim)}
-                    </p>
-                )
-                )}
+                      {item.usuario && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          <strong>{item.usuario.nome}</strong> está realizando este atendimento.
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    item.data_fim && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Duração do atendimento: {calcularDuracao(item.data_inicio, item.data_fim)}
+                      </p>
+                    )
+                  )}
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 p-4">
+              {abaAtiva === "abertas"
+                ? "Nenhum atendimento em aberto no momento."
+                : "Nenhum atendimento finalizado encontrado."}
             </div>
-          ))}
+          )}
+
         </motion.div>
       </AnimatePresence>
     </div>
