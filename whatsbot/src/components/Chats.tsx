@@ -9,23 +9,52 @@ import { constrainedMemory } from "process";
 
 type Props = {
   atendimento: Atendimento | null;
+  iniciado: boolean;
+  usuarioTemPermissao: boolean; // Adiciona essa prop
 };
 
-export default function Chats({ atendimento }: Props) {
+type Usuario = {
+  id: number;
+  nome: string;
+  email: string;
+};
+
+export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Props) {
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const historicoSeguro = Array.isArray(historico) ? historico : [];
   const [novaMensagem, setNovaMensagem] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  console.log(atendimento)
+  useEffect(() => {
+    api.get("/usuarios/me")
+      .then((res) => {
+        const dados = res.data as Usuario;
+        console.log('Autenticado:', res.data)
+        setUsuario(dados);
+      })
+      .catch((err) => {
+        console.log('Erro 401?', err.response?.status === 401);
+        console.error("Erro ao buscar usuario logado:", err);
+      });
+  }, []);
 
   useEffect(() => {
-    if (atendimento) {
+    if (
+      atendimento &&
+      usuario &&
+      atendimento.usuario?.id === usuario.id // Verifica se o atendimento foi iniciado pelo usuário
+    ) {
       api.get(`/atendimentos/${atendimento.id}/historico`)
         .then((res) => {
           setHistorico(res.data.historico);
         })
         .catch((err) => console.error("Erro ao buscar histórico:", err));
     }
-  }, [atendimento]);
+  }, [atendimento, usuario]);
+  
+  
+  
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,6 +92,15 @@ export default function Chats({ atendimento }: Props) {
       </div>
     );
   }
+  
+  // if (!usuarioTemPermissao) {
+  //   return (
+  //     <div className="p-4 text-center text-gray-600">
+  //       <p>Você não tem permissão para visualizar este atendimento.</p>
+  //     </div>
+  //   );
+  // }
+  
 
   const renderConteudo = (msg: Mensagem) => {
     if (msg.tipo === 'chat' && typeof msg.conteudo === 'string') {
@@ -102,13 +140,13 @@ export default function Chats({ atendimento }: Props) {
     }
   };
   
-
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] bg-[#e5ddd5]shadow-inner">
   
       {/* Corpo rolável */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-2">
+
           {historicoSeguro.map((msg, index) => {
             const isCliente = msg.de === 'cliente';
   

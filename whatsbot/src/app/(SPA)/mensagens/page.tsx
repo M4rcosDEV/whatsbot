@@ -19,10 +19,32 @@ type Atendentes = {
   atendimentos_abertos: number,
 }
 
+type Usuario = {
+  id: number;
+  nome: string;
+  email: string;
+};
+
+
 export default function Page() {
+  const [atendimentosIniciados, setAtendimentosIniciados] = useState<number[]>([]);
   const [atendentes, setAtendentes] = useState<Atendentes[]>([]);
   const [atendimentosSelecionados, setAtendimentosSelecionados] = useState<AtendimentoComHistorico[]>([]);
   const [abaAtivaId, setAbaAtivaId] = useState<number | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+  useEffect(() => {
+    api.get("/usuarios/me")
+      .then((res) => {
+        const dados = res.data as Usuario;
+        console.log('Autenticado:', res.data)
+        setUsuario(dados);
+      })
+      .catch((err) => {
+        console.log('Erro 401?', err.response?.status === 401);
+        console.error("Erro ao buscar usuario logado:", err);
+      });
+  }, []);
 
   const handleSelecionar = async (novo: Atendimento) => {
     const jaExiste = atendimentosSelecionados.find((a) => a.id === novo.id);
@@ -81,11 +103,26 @@ export default function Page() {
 
   const handleIniciar = async () => {
     if (!atendimentoAtivo) return;
-
-
+    console.table(`ATENDIMENTO ATIVO NO MOMENTO: ${atendimentoAtivo}`);
+    console.log(atendimentoAtivo)
     try {
       await api.put(`/atendimentos/${atendimentoAtivo.id}/iniciar`);
       console.log("Atendimento iniciado com sucesso.");
+
+      setAtendimentosIniciados(prev => [...prev, atendimentoAtivo.id]);
+
+      setAtendimentosSelecionados(prev =>
+        prev.map(item =>
+          item.id === atendimentoAtivo?.id
+            ? {
+                ...item,
+                usuario: usuario ? { id: usuario.id, nome: usuario.nome } : undefined,
+              }
+            : item
+        )
+      );
+      
+
       atualizarAtendentes();
       // Você pode emitir um evento no eventBus ou atualizar o estado se quiser refletir algo no UI
     } catch (error: any) {
@@ -141,7 +178,7 @@ export default function Page() {
         <div className="flex flex-col flex-1 ">
           {/* Abas horizontais */}
           <div className="flex flex-wrap gap-2 p-1 border-gray-700 bg-gray-100 overflow-x-auto shadow sticky ">
-            {atendimentosSelecionados.map((item) => (
+            {!atendimentosSelecionados.map((item) => (
               <div
                 key={item.id}
                 onClick={() => setAbaAtivaId(item.id)}
@@ -169,8 +206,13 @@ export default function Page() {
 
           {/* Conteúdo do chat, agora sem scroll desnecessário */}
           <div className="flex-1 bg-gray-100">
-            {atendimentoAtivo ? (
-              <Chats atendimento={atendimentoAtivo} />
+            {atendimentoAtivo && atendimentoAtivo.usuario?.id===usuario?.id ? (
+              
+              <Chats
+                atendimento={atendimentoAtivo}
+                iniciado={atendimentosIniciados.includes(atendimentoAtivo?.id ?? -1)}
+                usuarioTemPermissao={false}
+              />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400">
                 Nenhum chat selecionado
