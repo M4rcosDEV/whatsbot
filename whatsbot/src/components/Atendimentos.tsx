@@ -60,46 +60,46 @@ export default function Atendimentos({ onSelect }: Props) {
     return () => clearInterval(intervalo);
   }, []);
 
+  const buscarAtendimentos = async () => {
+    try {
+      const res = await api.get("/atendimentos");
+      const dados = res.data as Atendimento[];
+      console.log(dados);
+  
+      const abertas = dados.filter((item) => item.data_fim === null && !item.usuario?.id);
+      const fechadas = dados.filter((item) => item.data_fim !== null);
+  
+      setAtendimentos({ abertas, fechadas });
+    } catch (error) {
+      console.error("Erro ao buscar atendimentos:", error);
+    }
+  };
+  
+
   useEffect(() => {
     // Busca inicial dos atendimentos
-    api.get("/atendimentos")
-      .then((res) => {
-        const dados = res.data as Atendimento[];
+    buscarAtendimentos();
   
-        const abertas = dados.filter((item) => item.data_fim === null);
-        const fechadas = dados.filter((item) => item.data_fim !== null);
-  
-        setAtendimentos({ abertas, fechadas });
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar atendimentos:", err);
-      });
-  
-    // Listener do socket
-    const atualizarAtendimentos = () => {
-      console.log("📩 Novo atendimento recebido via socket");
-  
-      api.get("/atendimentos")
-        .then((res) => {
-          const dados = res.data as Atendimento[];
-  
-          const abertas = dados.filter((item) => item.data_fim === null);
-          const fechadas = dados.filter((item) => item.data_fim !== null);
-  
-          setAtendimentos({ abertas, fechadas });
-        })
-        .catch((err) => {
-          console.error("Erro ao atualizar atendimentos:", err);
-        });
-    };
-  
-    socket.on("novo-atendimento", atualizarAtendimentos);
-  
+    socket.on("novo-atendimento", buscarAtendimentos);
+    
     // Remove listener quando desmonta o componente
     return () => {
-      socket.off("novo-atendimento", atualizarAtendimentos);
+      socket.off("novo-atendimento", buscarAtendimentos);
     };
   }, []);
+
+  useEffect(() => {
+    // Busca inicial dos atendimentos
+    buscarAtendimentos();
+  
+    eventBus.on("atendimentoIniciadoSucesso", buscarAtendimentos);
+
+    return () => {
+      eventBus.off("atendimentoIniciadoSucesso", buscarAtendimentos);
+    };
+  }, []);
+
+
 
   const handleSelecionarAtendimento = async (item: Atendimento) => {
     try {
@@ -153,7 +153,7 @@ export default function Atendimentos({ onSelect }: Props) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="max-h-[70vh] overflow-y-auto p-2 space-y-4 custom-scroll"
+          className="max-h-[70vh] overflow-y-auto p-2 space-y-1 custom-scroll"
         >
           {atendimentos[abaAtiva]?.length > 0 ? (
             atendimentos[abaAtiva].map((item) => (
@@ -183,10 +183,6 @@ export default function Atendimentos({ onSelect }: Props) {
                     >
                       {item.protocolo}
                     </a>
-                    <br />
-                    Aguarde um momento, um de nossos técnicos irá lhe atender assim que possível.
-                    <br />
-                    Caso deseje, pode descrever seu problema abaixo para agilizar seu atendimento.
                   </p>
 
                   {abaAtiva === "abertas" ? (

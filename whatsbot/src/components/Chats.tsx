@@ -23,8 +23,9 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const historicoSeguro = Array.isArray(historico) ? historico : [];
   const [novaMensagem, setNovaMensagem] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
   console.log(atendimento)
   useEffect(() => {
     api.get("/usuarios/me")
@@ -57,7 +58,9 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
   
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [historico]);
 
 
@@ -141,10 +144,10 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
   };
   
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] bg-[#e5ddd5]shadow-inner">
+    <div className="flex flex-col h-[calc(100vh-90px)] bg-[#e5ddd5]shadow-inner ">
   
       {/* Corpo rolável */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-2">
 
           {historicoSeguro.map((msg, index) => {
@@ -164,22 +167,23 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
               </div>
             );
           })}
-          <div ref={endRef} />
+        
         </div>
       </div>
-  
+ 
       {/* Campo de envio */}
+
       <form
         onSubmit={handleEnviarMensagem}
-        className="w-full bg-[#202c33] px-4 py-3 flex items-center gap-3"
+        className="w-full bg-white px-4 py-3 flex items-center gap-3"
       >
         {/* Emoji */}
-        <button type="button" className="text-gray-400 hover:text-white">
+        <button type="button" className="text-gray-900 hover:text-white">
           <FaceSmileIcon className="w-6 h-6" />
         </button>
   
         {/* Anexo */}
-        <button type="button" className="text-gray-400 hover:text-white">
+        <button type="button" className="text-gray-900 hover:text-white">
           <PaperClipIcon className="w-6 h-6" />
         </button>
   
@@ -189,7 +193,7 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
           value={novaMensagem}
           onChange={(e) => setNovaMensagem(e.target.value)}
           placeholder="Mensagem"
-          className="flex-1 bg-[#2a3942] text-white rounded-full px-4 py-2 focus:outline-none"
+          className="flex-1 bg-gray-300 text-gray-900 rounded-full px-4 py-2 focus:outline-none"
         />
   
         {/* Microfone */}

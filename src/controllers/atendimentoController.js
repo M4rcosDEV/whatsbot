@@ -27,6 +27,7 @@ async function iniciarAtendimento(req, res) {
     const usuarioId = req.user.id; 
     console.log("Params:", req.params);
     console.log("Body:", req.body);
+    
 
 
     try {
@@ -200,6 +201,30 @@ async function enviarMensagensCliente(req, res) {
     }
 }
 
+async function buscarChatsAbertos(req , res) {
+    const usuarioId = req.user.id;
+    try {
+        const atendimentos = await Atendimento.findAll({
+            order: [["updatedAt", "DESC"]],
+            include: [
+                {
+                    model: Usuario,
+                    as: 'usuario',
+                    attributes: ['id', 'nome'],
+                }
+            ],
+            where: {
+                usuario_id: usuarioId,
+                data_fim: null
+            }
+        });
+        res.json(atendimentos);
+    } catch (error) {
+        console.error('Erro ao listar atendimentos:', error);
+        res.status(500).json({ erro: 'Erro ao buscar atendimentos' });
+    }
+}
+
 module.exports = {
     listarAtendimentos,
     iniciarAtendimento,
@@ -207,5 +232,6 @@ module.exports = {
     buscarMidiaDownload,
     encerrar,
     buscarHistoricoAtendimento,
-    enviarMensagensCliente
+    enviarMensagensCliente,
+    buscarChatsAbertos
 };

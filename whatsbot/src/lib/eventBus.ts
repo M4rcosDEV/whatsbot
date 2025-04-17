@@ -1,7 +1,8 @@
 import mitt from 'mitt'
 
 type Events = {
-  atendimentoIniciado: void
+  atendimentoIniciado: void,
+  atendimentoIniciadoSucesso: number
 }
 
 export const eventBus = mitt<Events>()

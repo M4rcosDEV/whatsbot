@@ -6,6 +6,7 @@ const { Atendimento } = require("../models");
 
 // Todas as rotas protegidas por JWT
 router.get("/", passport.authenticate('jwt', { session: false }), atendimentoController.listarAtendimentos);
+router.get('/chats/abertos', passport.authenticate('jwt', { session: false }), atendimentoController.buscarChatsAbertos);
 router.post("/:id_atendimento/enviar", passport.authenticate('jwt', { session: false }), atendimentoController.enviarMensagensCliente);
 router.post("/encerrar", passport.authenticate('jwt', { session: false }), atendimentoController.encerrar);
 router.put("/:id/iniciar", passport.authenticate('jwt', { session: false }), atendimentoController.iniciarAtendimento);
