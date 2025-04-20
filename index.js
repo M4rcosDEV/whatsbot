@@ -94,8 +94,10 @@ client.on("message_create", async (message) => {
     let atendimento = await Atendimento.findOne({ where: { numero: remetente, data_fim: null } });
 
     if (!atendimento && !message.fromMe) {
+        const fotoPerfil = await getFotoPerfil(remetente);
+        //console.log('Foto de perfil :', fotoPerfil);
         const protocolo = gerarProtocolo();
-        atendimento = await Atendimento.create({ protocolo, cliente: nomeCliente, numero:remetente });
+        atendimento = await Atendimento.create({ protocolo, cliente: nomeCliente, numero:remetente, foto_perfil: fotoPerfil });
 
         //substituir para remetente
         client.sendMessage('557798441226@c.us', `Olá! Seu protocolo de atendimento é: *${protocolo}*`);
@@ -106,6 +108,7 @@ client.on("message_create", async (message) => {
             numero: atendimento.numero,
             protocolo: atendimento.protocolo,
             data_inicio: atendimento.data_inicio,
+            foto_perfil: fotoPerfil
         });
     }
 
@@ -144,6 +147,17 @@ async function getNomeContato(numero) {
     }
 }
 
+async function getFotoPerfil(numero) {
+    try {
+        const contato = await client.getContactById(numero);
+        const fotoUrl = await contato.getProfilePicUrl();
+        return fotoUrl || null;
+    } catch (error) {
+        console.error(`Erro ao obter foto de perfil: ${error}`);
+        return null;
+    }
+}
+
 
 function verificarTipo(msg) {
     if (msg.hasMedia && msg.type === 'image') {
@@ -163,7 +177,7 @@ function verificarTipo(msg) {
 client.initialize();
 
 // Sincronizar com o banco
-sequelize.sync({})
+sequelize.sync()
     .then(() => console.log("Tabelas sincronizadas com o banco!"))
     .catch(err => console.error("Erro ao sincronizar tabelas:", err));
 

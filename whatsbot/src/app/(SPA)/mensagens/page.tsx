@@ -36,8 +36,9 @@ export default function Page() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [atendimentoSelecionado, setAtendimentoSelecionado] = useState<AtendimentoComHistorico | null>(null);
-
-
+  const [outrosAtendentes , setOutrosAtendentes] = useState<Atendentes[]>([]);
+  const [modoTransferencia, setModoTransferencia] = useState(false);
+  const [atendenteSelecionadoTransferencia, setAtendenteSelecionadoTransferencia] = useState<Atendentes | null >(null);
 
   useEffect(() => {
     api.get("/usuarios/me")
@@ -51,20 +52,25 @@ export default function Page() {
         console.error("Erro ao buscar usuario logado:", err);
       });
 
-      api.get("/atendimentos/chats/abertos")
-        .then((res) => {
-          const dados = res.data as AtendimentoComHistorico;
-          //console.log('Atendimentos em aberto:', res.data)
-          setAtendimentosAbertos(res.data);
-        })
-        .catch((err) => {
-          console.log('Erro 401?', err.response?.status === 401);
-          console.error("Erro ao atendimentos em aberto:", err);
-        });
-
+      buscarAtendimentosAbertos();
   }, []);
 
+  async function buscarAtendimentosAbertos() {
+    try {
+      const res = await api.get("/atendimentos/chats/abertos");
+      const dados = res.data;
+      //console.log('Atendimentos em aberto:', dados);
+      setAtendimentosAbertos(dados);
+    } catch (err: any) {
+      console.log('Erro 401?', err.response?.status === 401);
+      console.error("Erro ao buscar atendimentos em aberto:", err);
+    }
+  }
+  
+  
+
   const handleSelecionar = async (novo: Atendimento) => {
+    
     const jaExiste = atendimentosSelecionados.find((a) => a.id === novo.id);
     if (jaExiste) {
       setAbaAtivaId(novo.id);
@@ -113,6 +119,7 @@ export default function Page() {
     api.get("/usuarios/status")
       .then((res) => {
         const dados = res.data as Atendentes[];
+        console.log(dados)
         setAtendentes(dados);
       })
       .catch((err) => {
@@ -178,18 +185,78 @@ export default function Page() {
     }
   };
 
-  const handleTransferir = (atendimento: AtendimentoComHistorico) => {
+  const handleTransferir = async (atendimento: AtendimentoComHistorico) => {
     console.log("Transferindo atendimento:", atendimento);
-    // Implemente aqui a lógica real
+  
+    try {
+      setOutrosAtendentes(atendentes.filter(atendente => atendente.id !== usuario?.id));
+      console.log('Outros atendentes disponíveis para transferência:', outrosAtendentes);
+      console.log(`Transferir para ${atendenteSelecionadoTransferencia}`);
+      setModoTransferencia(true);
+    } catch (error) {
+      console.error('Erro ao tentar transferir atendimento:', error);
+    }
   };
+
+  const confirmarTransferencia = async (atendimento: AtendimentoComHistorico, atendente: Atendentes) => {
+    try {
+      await api.put(`/atendimentos/transferir/${atendimento.id}/${atendente.id}`);
+      console.log(`Transferido para atendente ${atendente.nome}`);
+  
+      setAtendenteSelecionadoTransferencia(atendente);
+      setAtendimentosAbertos(prev => prev.filter((a) => a.id !== atendimento.id));
+      setAtendimentosSelecionados(prev =>
+        prev.filter((a) => a.id !== atendimento.id)
+      );
+      setModalAberto(false);
+      buscarAtendimentosAbertos();
+      setModoTransferencia(false);
+      atualizarAtendentes();
+    } catch (error) {
+      console.error("Erro ao transferir atendimento:", error);
+    }
+  };
+  
+
+
+  
 
   const atendimentoAtivo = atendimentosSelecionados.find((a) => a.id === abaAtivaId);
   //console.log(`TESTE atendimento ativo:`)
   //console.log(atendimentoAtivo)
 
-  function handleEncerrar(atendimento: AtendimentoComHistorico) {
+  const handleEncerrar = async (atendimento: AtendimentoComHistorico) => {
     console.log("Encerrando atendimento:", atendimento);
-  }
+    try {
+      await api.post(`/atendimentos/${atendimento.id}/encerrar`);
+      console.log('Atendimento encerrado com sucesso!');
+  
+      // Remove da lista de selecionados
+      setAtendimentosSelecionados(prev =>
+        prev.filter((a) => a.id !== atendimento.id)
+      );
+  
+      // Remove da lista de abertos
+      setAtendimentosAbertos(prev =>
+        prev.filter((a) => a.id !== atendimento.id)
+      );
+  
+      // Remove da lista de iniciados (caso esteja)
+      setAtendimentosIniciados(prev =>
+        prev.filter((id) => id !== atendimento.id)
+      );
+  
+      // Se ele era o ativo, limpa o estado
+      if (atendimentoAtivo?.id === atendimento.id) {
+        setAbaAtivaId(null);
+      }
+  
+      atualizarAtendentes(); // atualiza status dos atendentes
+    } catch (error) {
+      console.error('Erro ao encerrar atendimento:', error);
+    }
+  };
+  
 
   return (
     <div className={`flex flex-col h-screen ${poppins.className}`}>
@@ -213,60 +280,65 @@ export default function Page() {
       {/* Conteúdo principal */}
       <div className="flex flex-1">
         {/* Painel lateral de atendimentos */}
-        <div className="w-full sm:w-[130px] md:w-[230px] lg:w-[330px] xl:w-[530px] p-4 overflow-y-auto bg-white border-r border-gray-200">
+        <div className="w-full sm:w-[130px] md:w-[230px] lg:w-[330px] xl:w-[530px] p-4 overflow-y-auto bg-white border-r border-gray-200 flex flex-col">
           <Atendimentos onSelect={handleSelecionar} />
-          <div className="mt-4 flex flex-row gap-2">
-            {atendimentoAtivo && (
-              <button onClick={() => handleIniciar(atendimentoAtivo)} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+
+          <div className="mt-auto flex justify-end">
+            {atendimentoAtivo ? (
+              <button
+                onClick={() => handleIniciar(atendimentoAtivo)}
+                className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                INICIAR
+              </button>
+            ) : (
+              <button
+                disabled
+                className="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg cursor-not-allowed"
+              >
                 INICIAR
               </button>
             )}
-            {!atendimentoAtivo && (
-              <button disabled={true} className="bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-              INICIAR
-            </button>
-            )}
           </div>
         </div>
-
         {/* Área principal com abas e chat */}
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1 w-1">
           {/* Abas horizontais */}
-          <div className="flex flex-wrap gap-2 p-1 border-gray-700 bg-gray-100 overflow-x-auto shadow sticky ">
-            {atendimentosAbertos.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => handleSelecionar(item)}
-                className={`flex items-center justify-between px-3 py-1 border rounded-md cursor-pointer transition-all duration-200 ${
-                  abaAtivaId === item.id
-                    ? "bg-blue-500 text-white border-white"
-                    : "bg-white text-black border-gray-300 shadow-sm"
-                }`}
-              >
-                <span className="truncate max-w-[300px] w-[100px] text-sm font-medium">{item.cliente || item.numero}</span>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // impede que selecione a aba
+          <div className="relative bg-gray-100 shadow sticky top-0 z-10">
+            <div className="flex gap-2 p-1 overflow-x-auto max-w-full whitespace-nowrap">
+              {atendimentosAbertos.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleSelecionar(item)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
                     setAtendimentoSelecionado(item);
                     setModalAberto(true);
                   }}
-                  className="ml-2 text-lg leading-none text-black hover:text-red-500"
+                  className={`flex items-center justify-between px-3 py-1 border rounded-md cursor-pointer transition-all duration-200 ${
+                    abaAtivaId === item.id
+                      ? "bg-blue-500 text-white border-white"
+                      : "bg-white text-black border-gray-300 shadow-sm"
+                  }`}
                 >
-                  <ExternalLink size={16}/>
-                </button>
-              </div>
-            ))}
-
-            {atendimentosAbertos.length > 4 && (
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <div className="bg-gradient-to-l from-gray-100 to-transparent pl-4 py-2">
-                    <CircleArrowRight className="text-gray-500 animate-pulse" size={20} />
-                  </div>
+                  <span className="truncate max-w-[300px] w-[100px] text-sm font-medium select-none">
+                    {item.cliente || item.numero}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAtendimentoSelecionado(item);
+                      setModalAberto(true);
+                    }}
+                    className="ml-2 text-lg leading-none text-black hover:text-red-500"
+                  >
+                    <ExternalLink size={16} />
+                  </button>
                 </div>
-              )}
+              ))}
+            </div>
           </div>
-
+          
           {/* Conteúdo do chat, agora sem scroll desnecessário */}
           <div className="flex-1 bg-gray-100">
             {atendimentoAtivo && atendimentoAtivo.usuario?.id===usuario?.id ? (
@@ -289,55 +361,83 @@ export default function Page() {
           </div>
         </div>
       </div>
+      
       {modalAberto && atendimentoSelecionado && (
-      <div
-        className="fixed inset-0 flex items-center justify-center z-50"
-        style={{ backgroundColor: 'rgba(128, 128, 128, 0.3)' }}
-        onClick={() => setModalAberto(false)} // Clique fora fecha
-      >
         <div
-          className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full relative"
-          onClick={(e) => e.stopPropagation()} // Impede que clique dentro feche
+          className="fixed inset-0 flex items-center justify-center z-50 animate-background"
+          style={{ backgroundColor: 'rgba(128, 128, 128, 0.3)' }}
+          onClick={() => {
+            setModalAberto(false);
+            setModoTransferencia(false);
+          }}
         >
-          {/* Botão de fechar */}
-          <button
-            onClick={() => setModalAberto(false)}
-            className="absolute cursor-pointer top-3 right-3 text-gray-500 hover:text-red-500 transition-colors text-xl font-bold"
-            aria-label="Fechar modal"
+          <div
+            className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full relative animate-modal mb-10"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X size={20}/>
-          </button>
-
-          <h2 className="text-lg font-semibold mb-4">Ação para o atendimento</h2>
-
-          <p className="text-sm mb-6">
-            Deseja transferir ou encerrar o atendimento de{" "}
-            <strong>{atendimentoSelecionado.cliente || atendimentoSelecionado.numero}</strong>?
-          </p>
-
-          <div className="flex justify-center gap-2">
             <button
               onClick={() => {
-                setModalAberto(false);
-                handleTransferir(atendimentoSelecionado);
+                if (modoTransferencia) {
+                  setModoTransferencia(false); 
+                } else {
+                  setModalAberto(false); 
+                }
               }}
-              className="bg-blue-600 cursor-pointer text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="absolute cursor-pointer top-3 right-3 text-gray-500 hover:text-red-500 transition-colors text-xl font-bold"
+              aria-label="Fechar modal"
             >
-              Transferir
+              <X size={20} />
             </button>
-            <button
-              onClick={() => {
-                setModalAberto(false);
-                handleEncerrar(atendimentoSelecionado);
-              }}
-              className="bg-red-500 cursor-pointer text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Encerrar
-            </button>
+
+            <h2 className="text-lg font-semibold mb-4">
+              {modoTransferencia ? "Escolha o atendente" : "Ação para o atendimento"}
+            </h2>
+
+            {!modoTransferencia ? (
+              <>
+                <p className="text-sm mb-6">
+                  Deseja transferir ou encerrar o atendimento de{" "}
+                  <strong>{atendimentoSelecionado.cliente || atendimentoSelecionado.numero}</strong>?
+                </p>
+
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={() => handleTransferir(atendimentoSelecionado)}
+                    className="bg-blue-600 cursor-pointer text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    Transferir
+                  </button>
+                  <button
+                    onClick={() => {
+                      setModalAberto(false);
+                      handleEncerrar(atendimentoSelecionado);
+                    }}
+                    className="bg-red-500 cursor-pointer text-white px-4 py-2 rounded hover:bg-red-600"
+                  >
+                    Encerrar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                {outrosAtendentes.length > 0 ? (
+                  outrosAtendentes.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => confirmarTransferencia(atendimentoSelecionado, a)}
+                      className="w-full bg-blue-600 hover:bg-blue-200 text-blue-800 font-medium py-2 px-4 rounded"
+                    >
+                      {a.nome}
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-600">Nenhum atendente disponível.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    )}  
+      )}
     </div>
   );
 }

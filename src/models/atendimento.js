@@ -32,7 +32,21 @@ const Atendimento = sequelize.define("Atendimento", {
         },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
-    }  
+    },
+    contato_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'contatos',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+    },
+    foto_perfil: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    }
 },{
     tableName: 'atendimentos'
 });

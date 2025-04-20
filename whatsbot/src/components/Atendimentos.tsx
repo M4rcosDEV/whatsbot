@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import api from '@/lib/api';
 import socket from '@/lib/socket';
 import { eventBus } from "@/lib/eventBus";
-import Image from 'next/image'
+import Image from 'next/image';
+import { Pencil, X } from 'lucide-react';
 
 import { Atendimento } from '@/types/Atendimento';
 
@@ -21,12 +22,16 @@ type AtendimentosPorStatus = {
 
 function calcularTempoEspera(dataInicio: string, agora: Date): string {
   const inicio = new Date(dataInicio);
-  const diffMs = agora.getTime() - inicio.getTime();
+  let diffMs = agora.getTime() - inicio.getTime();
+
+  if (diffMs < 0) diffMs = 0;
+
   const diffMin = Math.floor(diffMs / 60000);
   const horas = Math.floor(diffMin / 60).toString().padStart(2, '0');
   const minutos = (diffMin % 60).toString().padStart(2, '0');
   return `${horas}:${minutos}`;
 }
+
 
 function calcularDuracao(dataInicio: string, dataFim: string): string {
     const inicio = new Date(dataInicio);
@@ -48,6 +53,11 @@ export default function Atendimentos({ onSelect }: Props) {
     abertas: [],
     fechadas: []
   });
+
+  const [modalAberto, setModalAberto] = useState(false);
+  const [atendimentoSelecionado, setAtendimentoSelecionado] =  useState<Atendimento | null>(null);
+  const [novoNome, setNovoNome] = useState("");
+
   
   const [agora, setAgora] = useState(new Date());
 
@@ -99,7 +109,20 @@ export default function Atendimentos({ onSelect }: Props) {
     };
   }, []);
 
-
+  async function handleSalvarNomeCliente(numero: string, nome: string) {
+    try {
+      console.log(numero, nome);
+      //await axios.post("/api/contatos", { numero, nome });
+      //toast.success("Nome atualizado com sucesso!");
+  
+      // Atualiza os atendimentos localmente ou refetch
+      // Ex: fetchAtendimentos() ou setAtendimentos(...)
+    } catch (error) {
+      console.error(error);
+      //toast.error("Erro ao salvar nome.");
+    }
+  }
+  
 
   const handleSelecionarAtendimento = async (item: Atendimento) => {
     try {
@@ -160,21 +183,39 @@ export default function Atendimentos({ onSelect }: Props) {
               <div
                 key={item.id}
                 onClick={() => handleSelecionarAtendimento(item)}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setAtendimentoSelecionado(item);
+                  setModalAberto(true);
+                }}
                 className={`flex items-center cursor-pointer bg-white shadow rounded-lg p-4 gap-4 transition-colors ${
                   selectedId === item.id ? 'bg-blue-100 border border-blue-400' : ''
                 }`}
               > 
                 <Image
-                  src={item.avatar || "/icons/avatar.png"}
-                  alt="Avatar"
-                  width={48}
-                  height={48}
+                  src={item.foto_perfil || "/icons/avatar.png"}
+                  alt="foto_perfil"
+                  width={144}
+                  height={144}
                   className="w-12 h-12 rounded-full object-cover"
                 />
-                <div>
+                <div className="flex-1">
+                <div className="flex items-center justify-between">
                   <h4 className="font-semibold text-base mb-1">
                     {item.cliente || item.numero}
                   </h4>
+                  {/* <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Impede que selecione o card
+                      setAtendimentoSelecionado(item);
+                      setModalAberto(true);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="Editar nome do cliente"
+                  >
+                    <Pencil size={16} />
+                  </button> */}
+                </div>
                   <p className="text-sm text-gray-700">
                     Olá, seu protocolo de atendimento é:{" "}
                     <a
@@ -217,6 +258,55 @@ export default function Atendimentos({ onSelect }: Props) {
         </motion.div>
       </AnimatePresence>
     </div>
+    {modalAberto && atendimentoSelecionado && (
+      <div
+        className="fixed inset-0 flex items-center justify-center z-50 animate-background"
+        style={{ backgroundColor: 'rgba(128, 128, 128, 0.3)' }}
+        onClick={() => setModalAberto(false)}
+      >
+        <div
+          className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full relative animate-modal mb-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setModalAberto(false)}
+            className="absolute cursor-pointer top-3 right-3 text-gray-500 hover:text-red-500 transition-colors text-xl font-bold"
+            aria-label="Fechar modal"
+          >
+            <X size={20} />
+          </button>
+
+          <h2 className="text-lg font-semibold mb-4">Editar nome do cliente</h2>
+
+          <input
+            type="text"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            placeholder="Digite o novo nome"
+            className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+          />
+
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => {
+                handleSalvarNomeCliente(atendimentoSelecionado.numero, novoNome);
+                setModalAberto(false);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Salvar
+            </button>
+            <button
+              onClick={() => setModalAberto(false)}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
   </div>
   );
 }

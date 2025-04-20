@@ -55,3 +55,32 @@ html *::-webkit-scrollbar-thumb {
 .aba{
   clip-path: polygon(0 0, 90% 0, 100% 100%, 0 100%);
 }
+
+@layer utilities {
+  @keyframes modal {
+    0% {
+      transform: translateY(4rem); 
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes background{
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  .animate-modal {
+    animation: modal 0.3s ease-out forwards;
+  }
+
+  .animate-background{
+    animation: background 0.3s ease-out forwards;
+  }
+}

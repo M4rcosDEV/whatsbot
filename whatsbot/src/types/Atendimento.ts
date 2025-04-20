@@ -25,7 +25,7 @@ export type Atendimento = {
       id: number;
       nome: string;
     };
-    avatar?: string;
+    foto_perfil?: string;
   };
 
   export type AtendimentoComHistorico = Atendimento & {

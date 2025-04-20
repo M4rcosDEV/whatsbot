@@ -144,7 +144,7 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
   };
   
   return (
-    <div className="flex flex-col h-[calc(100vh-90px)] bg-[#e5ddd5]shadow-inner ">
+    <div className="flex flex-col h-[calc(100vh-100px)] bg-[#e5ddd5]shadow-inner ">
   
       {/* Corpo rolável */}
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">

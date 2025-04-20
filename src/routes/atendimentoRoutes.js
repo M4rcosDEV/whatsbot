@@ -8,7 +8,7 @@ const { Atendimento } = require("../models");
 router.get("/", passport.authenticate('jwt', { session: false }), atendimentoController.listarAtendimentos);
 router.get('/chats/abertos', passport.authenticate('jwt', { session: false }), atendimentoController.buscarChatsAbertos);
 router.post("/:id_atendimento/enviar", passport.authenticate('jwt', { session: false }), atendimentoController.enviarMensagensCliente);
-router.post("/encerrar", passport.authenticate('jwt', { session: false }), atendimentoController.encerrar);
+router.post("/:id_atendimento/encerrar", passport.authenticate('jwt', { session: false }), atendimentoController.encerrar);
 router.put("/:id/iniciar", passport.authenticate('jwt', { session: false }), atendimentoController.iniciarAtendimento);
 router.put("/transferir/:id_atendimento/:id_atendente", passport.authenticate('jwt', { session: false }), atendimentoController.transferirAtendimento);
 router.get('/:id_atendimento/historico', passport.authenticate('jwt', { session: false }), atendimentoController.buscarHistoricoAtendimento);

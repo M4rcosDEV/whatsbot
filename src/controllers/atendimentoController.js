@@ -25,10 +25,8 @@ async function listarAtendimentos(req, res) {
 async function iniciarAtendimento(req, res) {
     const atendimentoId = req.params.id;
     const usuarioId = req.user.id; 
-    console.log("Params:", req.params);
-    console.log("Body:", req.body);
-    
-
+    //console.log("Params:", req.params);
+    //console.log("Body:", req.body);
 
     try {
         const atendimento = await Atendimento.findByPk(atendimentoId);
@@ -58,8 +56,8 @@ async function iniciarAtendimento(req, res) {
         
         const numero_cliente = atendimento.numero;
         const historico = await buscarHistorico(client, numero_cliente, 20);
-        console.log(numero_cliente)
-        console.log(historico)
+        //console.log(numero_cliente)
+        //console.log(historico)
         
         return res.status(200).json({ mensagem: 'Atendimento iniciado com sucesso',
             atendimento : atendimento,
@@ -132,18 +130,28 @@ async function transferirAtendimento(req, res) {
 }
 
 
-async function encerrar(req, res) { 
+async function encerrar(req, res) {
+    const atendimentoId = req.params.id_atendimento;
+    
     try {
-        const atendimento = await Atendimento.findOne({ where: { numero, data_fim: null } });
+        const atendimento = await Atendimento.findOne({ where: { id: atendimentoId , data_fim: null } });
 
         if (!atendimento) {
-            console.log(`Nenhum atendimento em aberto para ${numero}`);
+            console.log(`Nenhum atendimento em aberto`);
             return res.status(404).json({ mensagem: "Nenhum atendimento em aberto"});
         }
 
         atendimento.data_fim = new Date();
         await atendimento.save();
-        console.log(`Protocolo encerrado com sucesso para ${numero}`);
+                // Enviar mensagem para o cliente
+        if (atendimento.numero) {
+    
+            const mensagem = `Protoloco encerrado com sucesso`;
+            
+            //substituir numero pelo numero do cliente
+            await client.sendMessage(`13135550002@c.us`, mensagem);
+        }
+        console.log(`Protocolo encerrado com sucesso para ${atendimento.cliente}`);
         return res.json({ mensagem: "Protocolo encerrado com sucesso", atendimento });
         
     } catch (error) {
