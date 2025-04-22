@@ -2,6 +2,7 @@ export type Mensagem = {
   de: "cliente" | "atendente";
   tipo: "chat" | "image" | "video" | "audio" | "document" | "sticker"; // etc
   timestamp: number;
+  atendimento_id: number;
   conteudo: 
     | string
     | {
@@ -10,6 +11,19 @@ export type Mensagem = {
         filename: string;
         hasMedia: true;
       };
+};
+
+//Conversa é não sao as msg, são chats abertos no whatsapp
+export type Conversa = {
+  id: string;
+  nome:string;
+  numero: string;
+  ultimoTimestamp: number;
+
+}
+
+export type ConversaComHistorico = Conversa & {
+  historico: Mensagem[];
 };
 
 

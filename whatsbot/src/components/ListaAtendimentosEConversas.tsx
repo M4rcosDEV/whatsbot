@@ -3,21 +3,22 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from '@/lib/api';
+import {log} from '@/lib/log';
 import socket from '@/lib/socket';
 import { eventBus } from "@/lib/eventBus";
 import Image from 'next/image';
-import { Pencil, X } from 'lucide-react';
+import { Pencil, Search, X } from 'lucide-react';
 
-import { Atendimento } from '@/types/Atendimento';
+import { Atendimento, AtendimentoComHistorico, Conversa, ConversaComHistorico } from '@/types/Atendimento';
 
 
 type Props = {
-  onSelect: (atendimento: Atendimento) => void;
+  onSelect: (item: Atendimento | Conversa) => void;
 };
 
-type AtendimentosPorStatus = {
+type ListaAtendimentosEConversas = {
   abertas: Atendimento[];
-  fechadas: Atendimento[];
+  conversas: Conversa[];
 };
 
 function calcularTempoEspera(dataInicio: string, agora: Date): string {
@@ -44,21 +45,23 @@ function calcularDuracao(dataInicio: string, dataFim: string): string {
   }
   
 
-export default function Atendimentos({ onSelect }: Props) {
-  const [abaAtiva, setAbaAtiva] = useState<keyof AtendimentosPorStatus>("abertas");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selectedAtendimento, setSelectedAtendimento] = useState<Atendimento | null>(null);
-  const [atendimentos, setAtendimentos] = useState<AtendimentosPorStatus>({
+export default function ListaAtendimentosEConversas({ onSelect }: Props) {
+  const [abaAtiva, setAbaAtiva] = useState<keyof ListaAtendimentosEConversas>("abertas");
+  const [filtro, setFiltro] = useState("");
+  const [selectedIdAtendimento, setSelectedIdAtendimento] = useState<number | null>(null);
+  const [selectedConversa, setSelectedConversa] = useState<string | null>(null);
+  const [lista, setLista] = useState<ListaAtendimentosEConversas>({
     abertas: [],
-    fechadas: []
+    conversas: []
   });
 
+  //agora não
   const [modalAberto, setModalAberto] = useState(false);
   const [atendimentoSelecionado, setAtendimentoSelecionado] =  useState<Atendimento | null>(null);
   const [novoNome, setNovoNome] = useState("");
 
   
+
   const [agora, setAgora] = useState(new Date());
 
   // Atualiza o "agora" a cada minuto
@@ -74,14 +77,29 @@ export default function Atendimentos({ onSelect }: Props) {
     try {
       const res = await api.get("/atendimentos");
       const dados = res.data as Atendimento[];
-      console.log(dados);
   
       const abertas = dados.filter((item) => item.data_fim === null && !item.usuario?.id);
-      const fechadas = dados.filter((item) => item.data_fim !== null);
   
-      setAtendimentos({ abertas, fechadas });
+      setLista((prev) => ({
+        ...prev,
+        abertas,
+      }));
     } catch (error) {
       console.error("Erro ao buscar atendimentos:", error);
+    }
+  };
+
+  const buscarConversas = async () => {
+    try {
+      const res = await api.get("/conversas");
+      const dados = res.data as Conversa[];
+  
+      setLista((prev) => ({
+        ...prev,
+        conversas: dados,
+      }));
+    } catch (error) {
+      console.error("Erro ao buscar conversas:", error);
     }
   };
   
@@ -89,6 +107,7 @@ export default function Atendimentos({ onSelect }: Props) {
   useEffect(() => {
     // Busca inicial dos atendimentos
     buscarAtendimentos();
+    buscarConversas();
   
     socket.on("novo-atendimento", buscarAtendimentos);
     
@@ -122,30 +141,49 @@ export default function Atendimentos({ onSelect }: Props) {
       //toast.error("Erro ao salvar nome.");
     }
   }
-  
 
-  const handleSelecionarAtendimento = async (item: Atendimento) => {
-    try {
-      const result = await api.get(`/atendimentos/${item.id}/historico`);
-      const historico = result.data.historico;
+  function isAtendimento(item: any): item is Atendimento {
+    return 'protocolo' in item;
+  }
   
-      const itemComHistorico = { ...item, historico };
-  
-      setSelectedAtendimento(itemComHistorico);
-      setSelectedId(item.id);
-      onSelect(itemComHistorico);
-  
-      eventBus.emit('atendimentoIniciado');
-    } catch (error) {
-      console.error("Erro ao iniciar atendimento:", error);
+  function isConversa(item: any): item is Conversa {
+    return 'ultimoTimestamp' in item;
+  }
+
+  const handleSelecionar = async (item: Atendimento | Conversa) => {
+    if (isAtendimento(item)) {
+      console.log("É um atendimento:", item);
+      try {
+        setSelectedIdAtendimento(item.id);
+        onSelect(item);
+        
+      } catch (error) {
+        console.error("Erro ao selecionar atendimento:", error);
+      }
+    } else if (isConversa(item)) {
+      console.log("É uma conversa:", item);
+      try{
+        setSelectedConversa(item.id);
+        onSelect(item);
+      }catch(error){
+        console.error("Erro ao selecionar conversa:", error);
+      }
     }
   };
   
   
   const tabs = [
     { id: "abertas", label: "Em aberto" },
-    { id: "fechadas", label: "Fechadas" },
+    { id: "conversas", label: "Conversas" },
   ];
+
+  const conversasFiltradas =
+  abaAtiva === "conversas"
+    ? lista.conversas.filter((conversa) =>
+        conversa.nome?.toLowerCase().includes(filtro.toLowerCase()) ||
+        conversa.numero?.toLowerCase().includes(filtro.toLowerCase())
+      )
+    : lista[abaAtiva];
 
   return (
     <div className="m-0 bg-stone-200 pb-3 rounded-md">
@@ -155,7 +193,7 @@ export default function Atendimentos({ onSelect }: Props) {
         {tabs.map((tab) => (
             <button
             key={tab.id}
-            onClick={() => setAbaAtiva(tab.id as keyof AtendimentosPorStatus)}
+            onClick={() => setAbaAtiva(tab.id as keyof ListaAtendimentosEConversas)}
             className={`abinha flex-1 px-4 py-2 text-sm font-semibold transition rounded-t-lg
                 ${
                 abaAtiva === tab.id
@@ -166,7 +204,7 @@ export default function Atendimentos({ onSelect }: Props) {
             {tab.label}
             </button>
         ))}
-        </div>
+      </div>
 
       {/* Conteúdo */}
       <AnimatePresence mode="wait">
@@ -178,55 +216,59 @@ export default function Atendimentos({ onSelect }: Props) {
           transition={{ duration: 0.2 }}
           className="max-h-[70vh] overflow-y-auto p-2 space-y-1 custom-scroll"
         >
-          {atendimentos[abaAtiva]?.length > 0 ? (
-            atendimentos[abaAtiva].map((item) => (
+          {/* Filtro para conversas */}
+          {abaAtiva === "conversas" && (
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar conversa..."
+                  className="w-full p-3 pl-10 pr-4 border bg-white border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-500 transition-colors"
+                  value={filtro}
+                  onChange={(e) => setFiltro(e.target.value)}
+                />
+                {/* Ícone de busca */}
+
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"/>
+              </div>
+            </div>
+          )}
+
+          {/* Exibe os itens filtrados */}
+          {conversasFiltradas?.length > 0 ? (
+            conversasFiltradas.map((item) => (
               <div
                 key={item.id}
-                onClick={() => handleSelecionarAtendimento(item)}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  setAtendimentoSelecionado(item);
-                  setModalAberto(true);
-                }}
+                onClick={() => handleSelecionar(item)}
                 className={`flex items-center cursor-pointer bg-white shadow rounded-lg p-4 gap-4 transition-colors ${
-                  selectedId === item.id ? 'bg-blue-100 border border-blue-400' : ''
+                  selectedIdAtendimento === item.id || selectedConversa === item.id
+                    ? "bg-blue-100 border border-blue-400"
+                    : ""
                 }`}
-              > 
+              >
                 <Image
-                  src={item.foto_perfil || "/icons/avatar.png"}
+                  src={isAtendimento(item) && item.foto_perfil ? item.foto_perfil : "/icons/avatar.png"}
                   alt="foto_perfil"
                   width={144}
                   height={144}
                   className="w-12 h-12 rounded-full object-cover"
                 />
                 <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-base mb-1">
-                    {item.cliente || item.numero}
-                  </h4>
-                  {/* <button
-                    onClick={(e) => {
-                      e.stopPropagation(); // Impede que selecione o card
-                      setAtendimentoSelecionado(item);
-                      setModalAberto(true);
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                    title="Editar nome do cliente"
-                  >
-                    <Pencil size={16} />
-                  </button> */}
-                </div>
-                  <p className="text-sm text-gray-700">
-                    Olá, seu protocolo de atendimento é:{" "}
-                    <a
-                      href="#"
-                      className="text-blue-600 font-semibold hover:underline"
-                    >
-                      {item.protocolo}
-                    </a>
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-base mb-1">
+                      {isAtendimento(item) ? item.cliente : item.nome || item.numero}
+                    </h4>
+                  </div>
+                  {isAtendimento(item) && (
+                    <p className="text-sm text-gray-700">
+                      Olá, seu protocolo de atendimento é:{" "}
+                      <a href="#" className="text-blue-600 font-semibold hover:underline">
+                        {item.protocolo}
+                      </a>
+                    </p>
+                  )}
 
-                  {abaAtiva === "abertas" ? (
+                  {isAtendimento(item) && abaAtiva === "abertas" && (
                     <>
                       <p className="text-xs text-gray-500 mt-1">
                         Tempo em espera: {calcularTempoEspera(item.data_inicio, agora)}
@@ -237,12 +279,11 @@ export default function Atendimentos({ onSelect }: Props) {
                         </p>
                       )}
                     </>
-                  ) : (
-                    item.data_fim && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Duração do atendimento: {calcularDuracao(item.data_inicio, item.data_fim)}
-                      </p>
-                    )
+                  )}
+                  {isAtendimento(item) && abaAtiva !== "abertas" && item.data_fim && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Duração do atendimento: {calcularDuracao(item.data_inicio, item.data_fim)}
+                    </p>
                   )}
                 </div>
               </div>
@@ -251,10 +292,11 @@ export default function Atendimentos({ onSelect }: Props) {
             <div className="text-center text-gray-500 p-4">
               {abaAtiva === "abertas"
                 ? "Nenhum atendimento em aberto no momento."
+                : abaAtiva === "conversas"
+                ? "Nenhuma conversa encontrada."
                 : "Nenhum atendimento finalizado encontrado."}
             </div>
           )}
-
         </motion.div>
       </AnimatePresence>
     </div>

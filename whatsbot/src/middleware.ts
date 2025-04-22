@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  console.log('Funcionou')
   const token = request.cookies.get('auth-token')?.value
 
-  const protectedRoutes = ['/dashboard', '/usuarios', '/mensagens', '/configuracoes']
+  const protectedRoutes = ['/dashboard', '/usuarios', '/mensagens', '/relatorios', '/configuracoes']
 
   const isProtected = protectedRoutes.some((path) =>
     request.nextUrl.pathname.startsWith(path)
@@ -20,5 +19,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/usuarios/:path*', '/mensagens/:path*', '/configuracoes/:path*'],
+  matcher: ['/dashboard/:path*', '/usuarios/:path*', '/mensagens/:path*', '/relatorios/:path*', '/configuracoes/:path*'],
 }

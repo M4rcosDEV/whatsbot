@@ -11,13 +11,14 @@ import {
   SquarePlus,
   Building2,
   LayoutGrid,
-  LogOut
+  LogOut,
+  FileChartColumnIncreasing
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from 'next/navigation';
-//import profile from "../assets/profile.png";
+import { log } from '@/lib/log';
 import { Poppins } from 'next/font/google'
 
 const poppins = Poppins({
@@ -42,17 +43,17 @@ export default function Sidebar() {
     api.get("/usuarios/me")
       .then((res) => {
         const dados = res.data as Usuario;
-        console.log('Autenticado:', res.data)
+        //log('Autenticado:', res.data)
         setUsuario(dados);
       })
       .catch((err) => {
-        console.log('Erro 401?', err.response?.status === 401);
+        log('Erro 401?', err.response?.status === 401);
         console.error("Erro ao buscar atendimentos:", err);
       });
   }, []);
 
   const handleLogout = () => {
-    console.log('Fez logout')
+    log('Fez logout')
   }
 
   return (
@@ -84,6 +85,7 @@ export default function Sidebar() {
               { icon: <LayoutGrid size={16} />, text: "Setores", href: "/usuarios/novo" }
             ]} />
             <SidebarItem icon={<MessageCircle size={20} />} text="Mensagens" href="/mensagens" />
+            <SidebarItem icon={<FileChartColumnIncreasing size={20} />} text="Relatórios" href="/relatorios" />
             <SidebarItem icon={<Settings size={20} />} text="Configurações" href="/configuracoes" />
           </ul>
         </SidebarContext.Provider>

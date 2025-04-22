@@ -4,7 +4,7 @@ const { Sequelize } = require("sequelize");
 async function listarUsuarios(req, res) {
     try {
         const usuarios = await Usuario.findAll({
-            attributes: ["id", "nome", "email"], // Apenas esses campos
+            attributes: ["id", "nome", "email"], 
             order: [["createdAt", "ASC"]]
         });
         res.status(200).json(usuarios);

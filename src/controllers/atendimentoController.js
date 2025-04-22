@@ -72,31 +72,36 @@ async function iniciarAtendimento(req, res) {
 
 async function buscarMidiaDownload(req, res) {
     const { numero, mensagemId } = req.params;
-
-     try {
-        const chat = await client.getChatById(numero);
-        const messages = await chat.fetchMessages({ limit: 50 }); // ou ajuste se souber o index
-
-        const msg = messages.find(m => m.id.id === mensagemId);
-
-        if (!msg || !msg.hasMedia) {
+  
+    try {
+      const chat = await client.getChatById(numero);
+      const messages = await chat.fetchMessages({ limit: 50 });
+  
+      const msg = messages.find(m => m.id.id === mensagemId);
+  
+      if (!msg || !msg.hasMedia) {
         return res.status(404).json({ erro: 'Mídia não encontrada' });
-        }
-
-        const media = await msg.downloadMedia();
-
-        const buffer = Buffer.from(media.data, 'base64');
-        res.set({
-            'Content-Type': media.mimetype,
-            'Content-Disposition': `attachment; filename="${media.filename || 'arquivo'}"`
-        });
-        res.send(buffer);
-
-    }catch(err) {
-        console.error('Erro ao baixar mídia:', err);
-        res.status(500).json({ erro: 'Erro interno ao baixar mídia', descrição: err.message });
+      }
+  
+      const media = await msg.downloadMedia();
+      const buffer = Buffer.from(media.data, 'base64');
+  
+      res.setHeader('Content-Type', media.mimetype);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${media.filename || 'arquivo'}"`
+      );
+  
+      return res.send(buffer);
+    } catch (err) {
+      console.error('Erro ao baixar mídia:', err);
+      return res.status(500).json({
+        erro: 'Erro interno ao baixar mídia',
+        descricao: err.message
+      });
     }
-}
+  }
+  
 
 async function transferirAtendimento(req, res) {
     const usuarioId = req.user.id;

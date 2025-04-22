@@ -3,9 +3,13 @@ const express = require("express");
 const {buscarHistorico} = require('./src/services/historicoChat.js');
 const client = require("./src/services/whatsappClient.js");
 const {gerarProtocolo} = require("./src/utils/gerarProtocolo.js");
+const {getFotoPerfil} = require("./src/utils/getFotoPerfil.js");
+const {getNomeContato} = require("./src/utils/getNomeContato.js");
 const atendimentoRoutes = require("./src/routes/atendimentoRoutes");
 const usuarioRoutes = require("./src/routes/usuarioRoutes");
+const conversaRoutes = require("./src/routes/conversaRoutes");
 const authRoutes = require("./src/routes/authRoutes");
+
 const passport = require('passport');
 const rotasProtegida = require('./src/routes/protegidas.js');
 require('./src/config/passport')(passport);
@@ -27,6 +31,7 @@ app.use(express.json());
 app.use("/atendimentos", atendimentoRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/auth", authRoutes);
+app.use('/conversas', conversaRoutes);
 app.use('/api', rotasProtegida); 
 
 // Cria o servidor HTTP a partir do app Express
@@ -42,20 +47,20 @@ const io = new Server(server, {
 
   // Lógica do Socket.IO aqui (exemplo)
 io.on("connection", (socket) => {
-    console.log("🔥 Novo cliente conectado via socket:", socket.id);
+    //console.log("🔥 Novo cliente conectado via socket:", socket.id);
 
     socket.on("entrarSala", (salaId) => {
         socket.join(salaId);
-        console.log(`📥 Socket ${socket.id} entrou na sala ${salaId}`);
+        //console.log(`📥 Socket ${socket.id} entrou na sala ${salaId}`);
       });
     
       socket.on("sairSala", (salaId) => {
         socket.leave(salaId);
-        console.log(`📤 Socket ${socket.id} saiu da sala ${salaId}`);
+        //console.log(`📤 Socket ${socket.id} saiu da sala ${salaId}`);
       });
   
     socket.on("disconnect", () => {
-      console.log("❌ Cliente desconectado:", socket.id);
+      //console.log("❌ Cliente desconectado:", socket.id);
     });
 });
 
@@ -66,9 +71,6 @@ client.on('qr', qr => {
 
 client.on("ready", async () => {
     console.log("✅ Bot conectado!");
-    
-    //buscarHistorico(client, '558496590131@c.us', 10);
-
 });
 
 // Captura novas mensagens em tempo real
@@ -118,6 +120,7 @@ client.on("message_create", async (message) => {
         de: message.fromMe ? "atendente" : "cliente",
         tipo: message.type,
         timestamp: message.timestamp,
+        atendimento_id: atendimento.id,
     };
 
     if (message.hasMedia) {
@@ -131,32 +134,49 @@ client.on("message_create", async (message) => {
         novaMensagem.conteudo = message.body;
     }
     
-    console.log("🔊 Emitindo nova mensagem para sala:", `atendimento_${atendimento.id}`);
+    //console.log("🔊 Emitindo nova mensagem para sala:", `atendimento_${atendimento.id}`);
     io.to(`atendimento_${atendimento.id}`).emit("novaMensagem", novaMensagem);  
 });
 
-
-// Função para obter o nome do contato salvo
-async function getNomeContato(numero) {
-    try {
-        const contato = await client.getContactById(numero);
-        return contato.pushname || contato.name || numero; // Retorna o nome salvo ou o número se não houver nome
-    } catch (error) {
-        console.error(`Erro ao obter nome do contato: ${error}`);
-        return numero; // Retorna o número caso haja erro
+client.on("message_create", async (message) => {
+    if (
+        message.from.endsWith("@g.us") || 
+        message.from.endsWith("@broadcast") || 
+        message.from.endsWith("@newsletter") ||
+        message.type === 'e2e_notification'
+    ) {
+        return;
     }
-}
 
-async function getFotoPerfil(numero) {
-    try {
-        const contato = await client.getContactById(numero);
-        const fotoUrl = await contato.getProfilePicUrl();
-        return fotoUrl || null;
-    } catch (error) {
-        console.error(`Erro ao obter foto de perfil: ${error}`);
-        return null;
+    const remetente = message.fromMe ? message.to : message.from;
+    const nomeCliente = await getNomeContato(remetente);
+
+    console.log(remetente);
+    console.log(`troca de msg com ${nomeCliente}`);
+
+    const novaMensagem = {
+        de: message.fromMe ? "atendente" : "cliente",
+        tipo: message.type,
+        timestamp: message.timestamp,
+        numero: remetente
+    };
+
+    if (message.hasMedia) {
+        novaMensagem.conteudo = {
+            id: message.id.id,
+            mimetype: message.mimetype,
+            filename: message.filename || "arquivo",
+            hasMedia: true
+        };
+    } else {
+        novaMensagem.conteudo = message.body;
     }
-}
+
+    io.to(`conversa_${remetente}`).emit("novaMensagem", novaMensagem); 
+
+});
+
+
 
 
 function verificarTipo(msg) {

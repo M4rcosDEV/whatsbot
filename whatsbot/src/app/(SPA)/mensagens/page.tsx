@@ -1,18 +1,21 @@
 'use client';
 
-import Atendimentos from "@/components/Atendimentos";
+import ListaAtendimentosEConversas from "@/components/ListaAtendimentosEConversas";
 import Chats from "@/components/Chats";
 import { useEffect, useState } from "react";
 import api from '@/lib/api';
 import { eventBus } from "@/lib/eventBus";
 import { Poppins } from 'next/font/google';
-import { Atendimento, AtendimentoComHistorico } from '@/types/Atendimento';
+import { log } from '@/lib/log';
+import { Atendimento, AtendimentoComHistorico, Conversa, ConversaComHistorico, Mensagem } from '@/types/Atendimento';
 import { X, ExternalLink,CircleArrowRight } from 'lucide-react';
+import socket from '@/lib/socket';
 
 const poppins = Poppins({
   subsets: ['latin'],
   weight: ['400', '700'],
 });
+
 
 type Atendentes = {
   id: number,
@@ -30,25 +33,31 @@ type Usuario = {
 export default function Page() {
   const [atendimentosIniciados, setAtendimentosIniciados] = useState<number[]>([]);
   const [atendentes, setAtendentes] = useState<Atendentes[]>([]);
-  const [atendimentosSelecionados, setAtendimentosSelecionados] = useState<AtendimentoComHistorico[]>([]);
-  const [atendimentosAbertos, setAtendimentosAbertos] = useState<AtendimentoComHistorico[]>([]);
+  const [atendimentosSelecionados, setAtendimentosSelecionados] = useState<Atendimento[]>([]);
+  const [atendimentosAbertos, setAtendimentosAbertos] = useState<Atendimento[]>([]);
+
   const [abaAtivaId, setAbaAtivaId] = useState<number | null>(null);
+  const [abaAtivaConversaId, setAbaAtivaConversaId] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
-  const [atendimentoSelecionado, setAtendimentoSelecionado] = useState<AtendimentoComHistorico | null>(null);
+  const [atendimentoSelecionado, setAtendimentoSelecionado] = useState<Atendimento | null>(null);
   const [outrosAtendentes , setOutrosAtendentes] = useState<Atendentes[]>([]);
   const [modoTransferencia, setModoTransferencia] = useState(false);
   const [atendenteSelecionadoTransferencia, setAtendenteSelecionadoTransferencia] = useState<Atendentes | null >(null);
+  const [notificacoes, setNotificacoes] = useState<number[]>([]);
+  //const [conversasAbertas, setConversasAbertas] = useState<ConversaComHistorico[]>([]);
+  const [conversaSelecionadas, setConversasSelecionadas] = useState<Conversa[]>([]);
+
 
   useEffect(() => {
     api.get("/usuarios/me")
       .then((res) => {
         const dados = res.data as Usuario;
-        //console.log('Autenticado:', res.data)
+        //log('Autenticado:', res.data)
         setUsuario(dados);
       })
       .catch((err) => {
-        console.log('Erro 401?', err.response?.status === 401);
+        log('Erro 401?', err.response?.status === 401);
         console.error("Erro ao buscar usuario logado:", err);
       });
 
@@ -58,50 +67,69 @@ export default function Page() {
   async function buscarAtendimentosAbertos() {
     try {
       const res = await api.get("/atendimentos/chats/abertos");
+      log('dados aq')
       const dados = res.data;
-      //console.log('Atendimentos em aberto:', dados);
+      log('Atendimentos em aberto:', dados);
       setAtendimentosAbertos(dados);
     } catch (err: any) {
-      console.log('Erro 401?', err.response?.status === 401);
+      log('Erro 401?', err.response?.status === 401);
       console.error("Erro ao buscar atendimentos em aberto:", err);
     }
   }
   
+  function isAtendimento(item: any): item is Atendimento {
+    return 'protocolo' in item;
+  }
   
+  function isConversa(item: any): item is Conversa {
+    return 'ultimoTimestamp' in item;
+  }
 
-  const handleSelecionar = async (novo: Atendimento) => {
-    
-    const jaExiste = atendimentosSelecionados.find((a) => a.id === novo.id);
-    if (jaExiste) {
-      setAbaAtivaId(novo.id);
-      return;
-    }
+  const handleSelecionar = (novo: Atendimento | Conversa) => {
 
-    try {
-      const res = await api.get(`/atendimentos/${novo.id}/historico`);
-      const historico = res.data.historico || [];
-
-      const comHistorico: AtendimentoComHistorico = {
-        ...novo,
-        historico,
-      };
-
-      setAtendimentosSelecionados((prev) => [...prev, comHistorico]);
-
-      setAbaAtivaId(novo.id);
-    } catch (err) {
-      console.error("Erro ao buscar histórico:", err);
-    }
-  };
-
-  const handleOpcoes = (id: number) => {
-    setAtendimentosSelecionados((prev) => {
-      const novaLista = prev.filter((a) => a.id !== id);
-      if (abaAtivaId === id) {
-        setAbaAtivaId(novaLista.length > 0 ? novaLista[0].id : null);
+    if (isAtendimento(novo)) {
+      //log('Veio pro Page Atendimento:', novo);
+      const jaExiste = atendimentosSelecionados.find((a) => a.id === novo.id);
+      if (jaExiste) {
+        setAbaAtivaId(novo.id);
+        return;
       }
-      return novaLista;
-    });
+    
+      setAtendimentosSelecionados((prev) => [...prev, novo]);
+      //log('so praver',  atendimentoSelecionado)
+      setAbaAtivaId(novo.id);
+      setAbaAtivaConversaId(null);
+    }else if (isConversa(novo)){
+      setConversasSelecionadas((prev) => [...prev, novo]);
+      setAbaAtivaConversaId(novo.id);
+      setAbaAtivaId(null);
+    }
+
+
+    // if (isAtendimento(item)) {
+    //   console.log("É um atendimento:", item);
+    //   try {
+    //     setSelectedId(item.id);
+    //     onSelect(item);
+    //     log('Item atendimento selecionado:', item);
+        
+    //   } catch (error) {
+    //     console.error("Erro ao selecionar atendimento:", error);
+    //   }
+    // } else if (isConversa(item)) {
+    //   console.log("É uma conversa:", item);
+    //   try{
+    //     const result = await api.get(`/conversas/${item.id}/historico`);
+
+    //     const historico = result.data.historico;
+      
+    //     const itemComHistorico = { ...item, historico };
+    //     setSelectedConversa(item.id);
+    //     onSelect(itemComHistorico);
+    //   }catch(error){
+    //     console.error("Erro ao selecionar conversa:", error);
+    //   }
+    // }
   };
 
   useEffect(() => {
@@ -119,7 +147,7 @@ export default function Page() {
     api.get("/usuarios/status")
       .then((res) => {
         const dados = res.data as Atendentes[];
-        console.log(dados)
+        //log(dados)
         setAtendentes(dados);
       })
       .catch((err) => {
@@ -130,23 +158,17 @@ export default function Page() {
   const handleIniciar = async (novo: Atendimento) => {
     if (!atendimentoAtivo) return;
     //console.table(`ATENDIMENTO ATIVO NO MOMENTO: ${atendimentoAtivo}`);
-    //console.log(atendimentoAtivo)
-    console.log('Iniciando atendimento com ID:', atendimentoAtivo.id);
+    //log('aqui em baixo')
+    //log(atendimentoAtivo)
+    //log('Iniciando atendimento com ID:', atendimentoAtivo.id);
     try {
       await api.put(`/atendimentos/${atendimentoAtivo.id}/iniciar`);
-      console.log("Atendimento iniciado com sucesso.");
+      //log("Atendimento iniciado com sucesso.");
 
       setAtendimentosIniciados(prev => [...prev, atendimentoAtivo.id]);
 
-      const res = await api.get(`/atendimentos/${novo.id}/historico`);
-      const historico = res.data.historico || [];
 
-      const comHistorico: AtendimentoComHistorico = {
-        ...novo,
-        historico,
-      };
-
-      setAtendimentosAbertos((prev) => [...prev, comHistorico]);
+      setAtendimentosAbertos((prev) => [...prev, atendimentoAtivo]);
 
       setAtendimentosSelecionados(prev =>
         prev.map(item =>
@@ -158,18 +180,6 @@ export default function Page() {
             : item
         )
       );
-
-      setAtendimentosAbertos(prev =>
-        prev.map(item =>
-          item.id === atendimentoAtivo?.id
-            ? {
-                ...item,
-                usuario: usuario ? { id: usuario.id, nome: usuario.nome } : undefined,
-              }
-            : item
-        )
-      );
-      
 
       atualizarAtendentes();
 
@@ -185,23 +195,23 @@ export default function Page() {
     }
   };
 
-  const handleTransferir = async (atendimento: AtendimentoComHistorico) => {
-    console.log("Transferindo atendimento:", atendimento);
+  const handleTransferir = async (atendimento: Atendimento) => {
+    //log("Transferindo atendimento:", atendimento);
   
     try {
       setOutrosAtendentes(atendentes.filter(atendente => atendente.id !== usuario?.id));
-      console.log('Outros atendentes disponíveis para transferência:', outrosAtendentes);
-      console.log(`Transferir para ${atendenteSelecionadoTransferencia}`);
+      //log('Outros atendentes disponíveis para transferência:', outrosAtendentes);
+      //log(`Transferir para ${atendenteSelecionadoTransferencia}`);
       setModoTransferencia(true);
     } catch (error) {
       console.error('Erro ao tentar transferir atendimento:', error);
     }
   };
 
-  const confirmarTransferencia = async (atendimento: AtendimentoComHistorico, atendente: Atendentes) => {
+  const confirmarTransferencia = async (atendimento: Atendimento, atendente: Atendentes) => {
     try {
       await api.put(`/atendimentos/transferir/${atendimento.id}/${atendente.id}`);
-      console.log(`Transferido para atendente ${atendente.nome}`);
+      //log(`Transferido para atendente ${atendente.nome}`);
   
       setAtendenteSelecionadoTransferencia(atendente);
       setAtendimentosAbertos(prev => prev.filter((a) => a.id !== atendimento.id));
@@ -216,20 +226,16 @@ export default function Page() {
       console.error("Erro ao transferir atendimento:", error);
     }
   };
-  
-
-
-  
 
   const atendimentoAtivo = atendimentosSelecionados.find((a) => a.id === abaAtivaId);
-  //console.log(`TESTE atendimento ativo:`)
-  //console.log(atendimentoAtivo)
+  const conversaAtiva = conversaSelecionadas.find((c) => c.id === abaAtivaConversaId);
 
-  const handleEncerrar = async (atendimento: AtendimentoComHistorico) => {
-    console.log("Encerrando atendimento:", atendimento);
+
+  const handleEncerrar = async (atendimento: Atendimento) => {
+    log("Encerrando atendimento:", atendimento);
     try {
       await api.post(`/atendimentos/${atendimento.id}/encerrar`);
-      console.log('Atendimento encerrado com sucesso!');
+      //log('Atendimento encerrado com sucesso!');
   
       // Remove da lista de selecionados
       setAtendimentosSelecionados(prev =>
@@ -256,6 +262,45 @@ export default function Page() {
       console.error('Erro ao encerrar atendimento:', error);
     }
   };
+
+
+  useEffect(() => {
+    const handleNovaMensagem = (msg: Mensagem) => {
+      log("📩 Nova mensagem recebida via socket PAGE:", msg);
+  
+      const idAtendimento = msg.atendimento_id;
+  
+      // Se não for a aba ativa, marca como notificação
+      if (idAtendimento && idAtendimento !== abaAtivaId) {
+        setNotificacoes((prev) =>
+          prev.includes(idAtendimento) ? prev : [...prev, idAtendimento]
+        );
+      }
+
+    };
+  
+    socket.on("novaMensagem", handleNovaMensagem);
+  
+    return () => {
+      socket.off("novaMensagem", handleNovaMensagem);
+    };
+  }, [abaAtivaId]);
+  
+  useEffect(() => {
+    if (atendimentosAbertos.length > 0) {
+      atendimentosAbertos.forEach((at) => {
+        socket.emit("entrarSala", `atendimento_${at.id}`);
+      });
+  
+      return () => {
+        atendimentosAbertos.forEach((at) => {
+          socket.emit("sairSala", `atendimento_${at.id}`);
+        });
+      };
+    }
+  }, [atendimentoAtivo,atendimentosAbertos]);
+  
+  
   
 
   return (
@@ -281,7 +326,7 @@ export default function Page() {
       <div className="flex flex-1">
         {/* Painel lateral de atendimentos */}
         <div className="w-full sm:w-[130px] md:w-[230px] lg:w-[330px] xl:w-[530px] p-4 overflow-y-auto bg-white border-r border-gray-200 flex flex-col">
-          <Atendimentos onSelect={handleSelecionar} />
+          <ListaAtendimentosEConversas onSelect={handleSelecionar} />
 
           <div className="mt-auto flex justify-end">
             {atendimentoAtivo ? (
@@ -309,7 +354,10 @@ export default function Page() {
               {atendimentosAbertos.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => handleSelecionar(item)}
+                  onClick={() => {
+                    handleSelecionar(item);
+                    setNotificacoes((prev) => prev.filter((id) => id !== item.id)); // limpa notificação
+                  }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setAtendimentoSelecionado(item);
@@ -324,6 +372,14 @@ export default function Page() {
                   <span className="truncate max-w-[300px] w-[100px] text-sm font-medium select-none">
                     {item.cliente || item.numero}
                   </span>
+
+                  {/* Indicador de nova mensagem */}
+                  {/* {notificacoes.includes(item.id) && (
+                    <span className="ml-2 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">
+                      Nova
+                    </span>
+                  )} */}
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -341,19 +397,17 @@ export default function Page() {
           
           {/* Conteúdo do chat, agora sem scroll desnecessário */}
           <div className="flex-1 bg-gray-100">
-            {atendimentoAtivo && atendimentoAtivo.usuario?.id===usuario?.id ? (
-              
-              <Chats
-                atendimento={atendimentoAtivo}
-                iniciado={atendimentosIniciados.includes(atendimentoAtivo?.id ?? -1)}
-                usuarioTemPermissao={false}
-              />
-            ) : atendimentoAtivo!=null ? (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                 Inicie o atendimento ao cliente {atendimentoAtivo.cliente} 
-                 
-              </div>
-            ):(
+            {atendimentoAtivo ? (
+              atendimentoAtivo.usuario?.id === usuario?.id ? (
+                <Chats informacao={atendimentoAtivo} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  Inicie o atendimento ao cliente {atendimentoAtivo.cliente}
+                </div>
+              )
+            ) : conversaAtiva ? (
+              <Chats informacao={conversaAtiva} />
+            ) : (
               <div className="flex items-center justify-center h-full text-gray-400">
                 Nenhum chat selecionado
               </div>

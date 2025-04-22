@@ -1,16 +1,15 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Atendimento, Mensagem } from '@/types/Atendimento';
+import { Atendimento, Mensagem, Conversa } from '@/types/Atendimento';
 import api from "@/lib/api";
 import socket from '@/lib/socket';
+import { log } from '@/lib/log';
 import { PaperClipIcon, FaceSmileIcon, MicrophoneIcon } from '@heroicons/react/24/outline'; // ícones do Heroicons (instale via `@heroicons/react`)
 import { constrainedMemory } from "process";
 
 type Props = {
-  atendimento: Atendimento | null;
-  iniciado: boolean;
-  usuarioTemPermissao: boolean; // Adiciona essa prop
+  informacao: Atendimento | Conversa | null;
 };
 
 type Usuario = {
@@ -19,40 +18,56 @@ type Usuario = {
   email: string;
 };
 
-export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Props) {
+export default function Chats({ informacao }: Props) {
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const historicoSeguro = Array.isArray(historico) ? historico : [];
   const [novaMensagem, setNovaMensagem] = useState("");
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  console.log(atendimento)
+  function isAtendimento(item: any): item is Atendimento {
+    return 'protocolo' in item;
+  }
+  
+  function isConversa(item: any): item is Conversa {
+    return 'ultimoTimestamp' in item;
+  }
+
   useEffect(() => {
     api.get("/usuarios/me")
       .then((res) => {
         const dados = res.data as Usuario;
-        console.log('Autenticado:', res.data)
+        //log('Autenticado:', res.data)
         setUsuario(dados);
       })
       .catch((err) => {
-        console.log('Erro 401?', err.response?.status === 401);
+        log('Erro 401?', err.response?.status === 401);
         console.error("Erro ao buscar usuario logado:", err);
       });
   }, []);
 
   useEffect(() => {
-    if (
-      atendimento &&
-      usuario &&
-      atendimento.usuario?.id === usuario.id // Verifica se o atendimento foi iniciado pelo usuário
-    ) {
-      api.get(`/atendimentos/${atendimento.id}/historico`)
-        .then((res) => {
-          setHistorico(res.data.historico);
-        })
-        .catch((err) => console.error("Erro ao buscar histórico:", err));
+    if (isAtendimento(informacao)) {
+      if (
+        informacao &&
+        usuario &&
+        informacao.usuario?.id === usuario.id // Verifica se o atendimento foi iniciado pelo usuário
+      ) {
+        api.get(`/atendimentos/${informacao.id}/historico`)
+          .then((res) => {
+            setHistorico(res.data.historico);
+          })
+          .catch((err) => console.error("Erro ao buscar histórico:", err));
+      }
+    }else if (isConversa(informacao)){
+
+        api.get(`/conversas/${informacao.id}/historico`)
+          .then((res) => {
+            setHistorico(res.data.historico);
+          })
+          .catch((err) => console.error("Erro ao buscar histórico:", err));
     }
-  }, [atendimento, usuario]);
+  }, [informacao, usuario]);
   
   
   
@@ -66,29 +81,49 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
 
 
   useEffect(() => {
-    if (atendimento) {
-      socket.emit("entrarSala", `atendimento_${atendimento.id}`);
+    if(informacao){
+      if (isAtendimento(informacao)) {
+        socket.emit("entrarSala", `atendimento_${informacao.id}`);
   
-      const handleNovaMensagem = (msg: Mensagem) => {
-        console.log("📩 Nova mensagem recebida via socket:", msg);
-        setHistorico(prev => [...prev, msg]);
-      };
+        const handleNovaMensagem = (msg: Mensagem) => {
+          log("📩 Nova mensagem recebida via socket:", msg);
+          setHistorico(prev => [...prev, msg]);
+        };
+    
+        socket.on("novaMensagem", handleNovaMensagem);
+    
+        return () => {
+          socket.off("novaMensagem", handleNovaMensagem);
+          socket.emit("sairSala", `atendimento_${informacao.id}`);
+        };
+      } else if (isConversa(informacao)) {
+        socket.emit("entrarSala", `conversa_${informacao.id}`);
   
-      socket.on("novaMensagem", handleNovaMensagem);
-  
-      return () => {
-        socket.off("novaMensagem", handleNovaMensagem);
-        socket.emit("sairSala", `atendimento_${atendimento.id}`);
-      };
+        const handleNovaMensagem = (msg: Mensagem) => {
+          log("📩 Nova mensagem recebida via socket:", msg);
+          setHistorico(prev => [...prev, msg]);
+        };
+    
+        socket.on("novaMensagem", handleNovaMensagem);
+    
+        return () => {
+          socket.off("novaMensagem", handleNovaMensagem);
+          socket.emit("sairSala", `conversa_${informacao.id}`);
+        };
+      }
     }else{
-      console.log("Não há atendimento para conectar ao socket");
+      log("Não há atendimento ou conversa para conectar ao socket");
     }
-  }, [atendimento]);
-  
+
+    if (informacao) {
+      
+    }else{
+      log("Não há atendimento para conectar ao socket");
+    }
+  }, [informacao]);
   
 
-
-  if (!atendimento) {
+  if (!informacao) {
     return (
       <div className="max-w-4xl mx-auto p-4">
         <p>Selecione um atendimento para iniciar</p>
@@ -120,32 +155,34 @@ export default function Chats({ atendimento, iniciado, usuarioTemPermissao }: Pr
 
   const handleEnviarMensagem = async (e: FormEvent) => {
     e.preventDefault();
-    if (!novaMensagem.trim() || !atendimento) return;
-  
-    const novaMsg: Mensagem = {
-      de: "atendente",
-      tipo: "chat", // ou "text", se quiser padronizar como no WhatsApp
-      timestamp: Math.floor(Date.now() / 1000),
-      conteudo: novaMensagem.trim(),
-    };
-  
-    // Atualiza localmente
-    //setHistorico((prev) => [...prev, novaMsg]);
+    if (!novaMensagem.trim() || !informacao) return;
+
     setNovaMensagem("");
-  
-    try {
-      // Envia para API — ROTA AJUSTADA
-      await api.post(`/atendimentos/${atendimento.id}/enviar`, {
-        mensagem: novaMensagem.trim(),
-      });
-    } catch (err) {
-      console.error("❌ Erro ao enviar mensagem:", err);
+
+    if (isAtendimento(informacao)) {
+      try {
+        await api.post(`/atendimentos/${informacao.id}/enviar`, {
+          mensagem: novaMensagem.trim(),
+        });
+      } catch (err) {
+        console.error("❌ Erro ao enviar mensagem:", err);
+      }
+    }else if (isConversa(informacao)){
+      try {
+        await api.post(`/conversas/${informacao.id}/enviar`, {
+          mensagem: novaMensagem.trim(),
+        });
+      } catch (err) {
+        console.error("❌ Erro ao enviar mensagem:", err);
+      }
     }
+  
+
   };
   
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] bg-[#e5ddd5]shadow-inner ">
-  
+      
       {/* Corpo rolável */}
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-2">

@@ -7,7 +7,7 @@ export default function SocketProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     if (!socket.connected) {
       socket.connect();
-      console.log("🔌 Socket conectado no provider");
+      //console.log("🔌 Socket conectado no provider");
     }
 
     // Não desconecta no unmount. A conexão deve persistir durante o uso do app.

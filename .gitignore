@@ -2,4 +2,6 @@
 /node_modules
 /.wwebjs_auth
 /.wwebjs_cache
-
+/coverage
+whatsbot/src/components/Atendimentos copy.tsx
+whatsbot/src/app/(SPA)/mensagens/bkpPage.tsx
