@@ -21,7 +21,7 @@ type Usuario = {
 export default function Chats({ informacao }: Props) {
   const [historico, setHistorico] = useState<Mensagem[]>([]);
   const historicoSeguro = Array.isArray(historico) ? historico : [];
-  const [novaMensagem, setNovaMensagem] = useState("");
+  const [novaMensagem, setNovaMensagem] = useState<string>("");
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 

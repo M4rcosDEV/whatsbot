@@ -7,12 +7,7 @@ export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    try {
-      await api.post('/auth/logout'); // backend limpa o cookie httpOnly
-      router.push('/login'); // redireciona
-    } catch (err) {
-      console.error('Erro ao deslogar:', err);
-    }
+
   };
 
   return (

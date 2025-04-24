@@ -47,13 +47,15 @@ function calcularDuracao(dataInicio: string, dataFim: string): string {
 
 export default function ListaAtendimentosEConversas({ onSelect }: Props) {
   const [abaAtiva, setAbaAtiva] = useState<keyof ListaAtendimentosEConversas>("abertas");
-  const [filtro, setFiltro] = useState("");
+  const [filtro, setFiltro] = useState<string>("");
   const [selectedIdAtendimento, setSelectedIdAtendimento] = useState<number | null>(null);
   const [selectedConversa, setSelectedConversa] = useState<string | null>(null);
   const [lista, setLista] = useState<ListaAtendimentosEConversas>({
     abertas: [],
     conversas: []
   });
+
+  const [loading, setLoading] = useState<boolean>(false);
 
   //agora não
   const [modalAberto, setModalAberto] = useState(false);

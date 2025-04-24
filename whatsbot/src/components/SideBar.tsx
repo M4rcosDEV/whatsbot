@@ -15,11 +15,10 @@ import {
   FileChartColumnIncreasing
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useRouter } from 'next/navigation';
 import { log } from '@/lib/log';
-import { Poppins } from 'next/font/google'
+import { Poppins } from 'next/font/google';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -52,8 +51,13 @@ export default function Sidebar() {
       });
   }, []);
 
-  const handleLogout = () => {
-    log('Fez logout')
+  const handleLogout = async() => {
+    try {
+      await api.post('/auth/logout');
+      router.push('/login');
+    } catch (err) {
+      console.error('Erro ao deslogar:', err);
+    }
   }
 
   return (
@@ -92,7 +96,7 @@ export default function Sidebar() {
 
         {/* Rodapé */}
         <div className="border-t border-blue-400 flex p-3">
-          <LogOut className='hover:text-red-500' onClick={handleLogout}/>
+          <LogOut className='hover:text-red-500 ml-3 cursor-pointer' size={20} onClick={handleLogout}/>
           <div
             className={`flex justify-between items-center overflow-hidden transition-all ${
               expanded ? "w-52 ml-3" : "w-0"
