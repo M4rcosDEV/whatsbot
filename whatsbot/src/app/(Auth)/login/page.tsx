@@ -7,13 +7,17 @@ import Cookies from 'js-cookie';
 import Image from 'next/image';
 import LoginLayout from '../layout';
 import CircularProgress from '@mui/material/CircularProgress';
+import { Eye, EyeClosed, EyeOff } from 'lucide-react';
+import { log } from '@/lib/log';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const router = useRouter();
-  const [loading, setLoading]= useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showSenha, setShowSenha] = useState(false);
+
   
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -40,6 +44,13 @@ export default function LoginPage() {
     }
 
   };
+
+  const handleMouseDown = () => {
+    setShowSenha(true);
+    log('aqui')
+  }
+  const handleMouseUp = () => setShowSenha(false);
+  const handleMouseLeave = () => setShowSenha(false);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br p-4">
@@ -101,17 +112,28 @@ export default function LoginPage() {
                   <label htmlFor="senha" className="text-white/90 text-sm font-medium">
                     Senha
                   </label>
-                  <input
-                    id="senha"
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full bg-white/10 border border-white/20 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="senha"
+                      type={showSenha ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className="w-full bg-white/10 border border-white/20 text-white px-4 py-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      required
+                    />
+                    <button
+                        type="button"
+                        onMouseDown={handleMouseDown}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
+                        className="absolute top-1/2 cursor-pointer right-4 -translate-y-1/2 text-white/70 hover:text-white"
+                      >
+                        {showSenha ? <Eye size={20} /> : <EyeOff size={20} />}
+                        {/* showSenha ? <Eye size={20} /> : <EyeClosed size={20} */}
+                      </button>
+                  </div>
                 </div>
-
                 <button
                   type="submit"
                   className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-blue-900 transition font-medium"
