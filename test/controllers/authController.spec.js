@@ -2,6 +2,8 @@ beforeAll(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
+  
+  const { sequelize } = require('../../src/config/database');
 
 jest.mock('../../src/models/index', () => ({
     Usuario: {
@@ -190,4 +192,10 @@ describe('cadastrarUsuario', () => {
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ mensagem: 'Erro ao cadastrar usuário' });
     });
+});
+
+afterAll(async () => {
+  if (sequelize && typeof sequelize.close === 'function') {
+    await sequelize.close();
+  }
 });

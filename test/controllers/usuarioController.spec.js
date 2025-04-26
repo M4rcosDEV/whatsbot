@@ -1,4 +1,6 @@
 process.env.NODE_ENV = 'test';
+const { sequelize } = require('../../src/config/database');
+
 beforeAll(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -10,9 +12,6 @@ jest.mock('../../src/models/index', () => ({
       create: jest.fn()
     }
 }));
-
-
-  
 
 const { Usuario } = require('../../src/models/index');
 const { listarUsuarios, listarStatusUsuarios, criarUsuario} = require('../../src/controllers/usuarioController');
@@ -159,4 +158,10 @@ describe('criarUsuario', () => {
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({ mensagem: "Erro ao criar usuario" });
     });
+});
+
+afterAll(async () => {
+  if (sequelize && typeof sequelize.close === 'function') {
+    await sequelize.close();
+  }
 });

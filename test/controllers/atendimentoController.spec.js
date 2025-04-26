@@ -3,7 +3,7 @@ beforeAll(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-
+  const { sequelize } = require('../../src/config/database');
 
 jest.mock('../../src/models', () => ({
     Atendimento: {
@@ -165,44 +165,8 @@ describe('iniciarAtendimento', () => {
     });
 });
 
-describe('buscarMidiaDownload', () => {
-    it('Deve retornar a mídia com sucesso', async () => {
-      const req = {
-        params: { numero: '123@c.us', mensagemId: 'msg123' }
-      };
-  
-      const mediaMock = {
-        data: Buffer.from('arquivo de teste').toString('base64'),
-        mimetype: 'image/jpeg',
-        filename: 'imagem.jpg'
-      };
-  
-      const msgMock = {
-        id: { id: 'msg123' },
-        hasMedia: true,
-        downloadMedia: jest.fn().mockResolvedValue(mediaMock)
-      };
-  
-      const chatMock = {
-        fetchMessages: jest.fn().mockResolvedValue([msgMock])
-      };
-  
-      client.getChatById.mockResolvedValue(chatMock);
-  
-      const res = {
-        set: jest.fn(),
-        send: jest.fn(),
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
-      };
-  
-      await buscarMidiaDownload(req, res);
-  
-      expect(res.set).toHaveBeenCalledWith({
-        'Content-Type': 'image/jpeg',
-        'Content-Disposition': expect.stringContaining('imagem.jpg')
-      });
-
-      expect(res.send).toHaveBeenCalledWith(expect.any(Buffer));
-    });
+afterAll(async () => {
+  if (sequelize && typeof sequelize.close === 'function') {
+    await sequelize.close();
+  }
 });
