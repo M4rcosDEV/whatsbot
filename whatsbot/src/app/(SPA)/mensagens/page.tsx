@@ -104,32 +104,6 @@ export default function Page() {
       setAbaAtivaConversaId(novo.id);
       setAbaAtivaId(null);
     }
-
-
-    // if (isAtendimento(item)) {
-    //   console.log("É um atendimento:", item);
-    //   try {
-    //     setSelectedId(item.id);
-    //     onSelect(item);
-    //     log('Item atendimento selecionado:', item);
-        
-    //   } catch (error) {
-    //     console.error("Erro ao selecionar atendimento:", error);
-    //   }
-    // } else if (isConversa(item)) {
-    //   console.log("É uma conversa:", item);
-    //   try{
-    //     const result = await api.get(`/conversas/${item.id}/historico`);
-
-    //     const historico = result.data.historico;
-      
-    //     const itemComHistorico = { ...item, historico };
-    //     setSelectedConversa(item.id);
-    //     onSelect(itemComHistorico);
-    //   }catch(error){
-    //     console.error("Erro ao selecionar conversa:", error);
-    //   }
-    // }
   };
 
   useEffect(() => {
@@ -229,7 +203,6 @@ export default function Page() {
 
   const atendimentoAtivo = atendimentosSelecionados.find((a) => a.id === abaAtivaId);
   const conversaAtiva = conversaSelecionadas.find((c) => c.id === abaAtivaConversaId);
-
 
   const handleEncerrar = async (atendimento: Atendimento) => {
     log("Encerrando atendimento:", atendimento);

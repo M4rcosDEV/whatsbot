@@ -7,28 +7,16 @@ const api = axios.create({
   withCredentials: true, // para permitir envio/recebimento de cookies
 });
 
-// Interceptor de resposta
-// api.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     if (error.response?.status === 401) {
-//       console.warn('Não autenticado, redirecionando para login...');
-//       router.push('/login');
-//     }
-//     return Promise.reject(error);
-//   }
-// );
-
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Remova o redirecionamento automático
     if (error.response?.status === 401) {
-      console.warn('Não autenticado, redirecionando para login...');
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      console.warn('Erro 401 - Não autenticado');
+      // Não redireciona aqui
     }
     return Promise.reject(error);
   }
 );
+
 export default api;
