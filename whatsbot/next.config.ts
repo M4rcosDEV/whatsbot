@@ -33,6 +33,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  experimental: {
+    allowedDevOrigins: ["http://10.0.2.111:3000"], 
+  },
 };
 
 export default nextConfig;

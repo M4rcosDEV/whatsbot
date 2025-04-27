@@ -21,13 +21,16 @@ const { Server } = require("socket.io");
 const app = express();
 
 app.use(require('cors')({
-    origin: 'http://localhost:3000',
+    origin: 'http://10.0.2.111:3000',
     credentials: true,
 }))
 
 app.use(cookieParser());
 app.use(passport.initialize());
 app.use(express.json());
+app.get('/', (req, res) =>{
+    res.json('Teste')
+})
 app.use("/atendimentos", atendimentoRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/auth", authRoutes);
@@ -40,7 +43,7 @@ const server = http.createServer(app);
 // CORS para WebSocket (Socket.IO)
 const io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: "http://10.0.2.111:3000",
       credentials: true,
     },
   });

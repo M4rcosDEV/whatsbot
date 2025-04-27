@@ -279,12 +279,12 @@ export default function Page() {
   return (
     <div className={`flex flex-col h-screen ${poppins.className}`}>
       {/* Header fixo com atendentes */}
-      <div className="bg-white shadow p-4 sticky top-0 z-10">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="max-h-[10vh] max-w-screen sm:max-h-auto bg-white shadow p-4 sticky top-0 z-10">
+        <div className="max-h-full max-w-[70vw] bg-white flex flex-nowrap items-center gap-4 overflow-x-auto overflow-y-hidden">
           {atendentes.map((user) => (
             <div key={user.id} className="relative group flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${user.atendimentos_abertos > 0 ? "bg-orange-400" : "bg-green-500"}`}></span>
-              <span className="text-sm text-gray-800">{user.nome}</span>
+              <span className={`w-1.5 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${user.atendimentos_abertos > 0 ? "bg-orange-400" : "bg-green-500"}`}></span>
+              <span className="text-[10px] sm:text-sm text-gray-800">{user.nome}</span>
               {user.atendimentos_abertos > 0 && (
                 <div className="absolute -bottom-5 left-2/3 -translate-x-1/2 whitespace-nowrap rounded bg-black px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-20">
                   {user.atendimentos_abertos} em atendimento
@@ -320,7 +320,7 @@ export default function Page() {
           </div>
         </div>
         {/* Área principal com abas e chat */}
-        <div className="flex flex-col flex-1 w-1">
+        <div className="hidden sm:flex flex-col flex-1 w-1">
           {/* Abas horizontais */}
           <div className="relative bg-gray-100 shadow sticky top-0 z-10">
             <div className="flex gap-2 p-1 overflow-x-auto max-w-full whitespace-nowrap">

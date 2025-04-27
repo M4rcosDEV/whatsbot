@@ -7,6 +7,7 @@ import socket from '@/lib/socket';
 import { log } from '@/lib/log';
 import { PaperClipIcon, FaceSmileIcon, MicrophoneIcon } from '@heroicons/react/24/outline'; // ícones do Heroicons (instale via `@heroicons/react`)
 import { constrainedMemory } from "process";
+import { MensagemConteudo } from "./MensagemConteudo";
 
 type Props = {
   informacao: Atendimento | Conversa | null;
@@ -79,7 +80,6 @@ export default function Chats({ informacao }: Props) {
   }, [historico]);
 
 
-
   useEffect(() => {
     if(informacao){
       if (isAtendimento(informacao)) {
@@ -140,19 +140,6 @@ export default function Chats({ informacao }: Props) {
   // }
   
 
-  const renderConteudo = (msg: Mensagem) => {
-    if (msg.tipo === 'chat' && typeof msg.conteudo === 'string') {
-      return msg.conteudo;
-    }
-
-    if (typeof msg.conteudo === 'object' && msg.conteudo?.hasMedia) {
-      const tipoLabel = msg.tipo === 'sticker' ? 'Sticker' : msg.tipo === 'document' ? 'Documento' : 'Arquivo';
-      return `[${tipoLabel}: ${msg.conteudo.filename || 'sem nome'}]`;
-    }
-
-    return 'Conteúdo desconhecido';
-  };
-
   const handleEnviarMensagem = async (e: FormEvent) => {
     e.preventDefault();
     if (!novaMensagem.trim() || !informacao) return;
@@ -179,7 +166,17 @@ export default function Chats({ informacao }: Props) {
   
 
   };
-  
+
+  const isMensagemTexto = (msg: Mensagem) => {
+    return msg.tipo === 'chat';
+  };
+
+  log('historico')
+  log(historico)
+  log('historicoSeguro')
+  log(historicoSeguro)
+  log('informacao')
+  log(informacao)
   return (
     <div className="flex flex-col h-[calc(100vh-100px)] bg-[#e5ddd5]shadow-inner ">
       
@@ -189,19 +186,22 @@ export default function Chats({ informacao }: Props) {
 
           {historicoSeguro.map((msg, index) => {
             const isCliente = msg.de === 'cliente';
-  
+            const isTexto = isMensagemTexto(msg);
             return (
-              <div
-                key={index}
-                className={`flex ${isCliente ? 'justify-start' : 'justify-end'}`}
-              >
-                <div className={`
-                  px-4 py-2 rounded-xl max-w-[80%] shadow
-                  ${isCliente ? 'bg-white text-black' : 'bg-[#dcf8c6] text-black'}
-                `}>
-                  <p className="text-sm">{renderConteudo(msg)}</p>
+                <div
+                  key={index}
+                  className={`flex ${isCliente ? 'justify-start' : 'justify-end'}`}
+                >
+                  <div className={`
+                    ${isTexto ? 'px-4 py-2 rounded-xl shadow' : ''}
+                    max-w-[80%]
+                    ${isCliente ? (isTexto ? 'bg-white text-black' : '') : (isTexto ? 'bg-[#dcf8c6] text-black' : '')}
+                  `}>
+                    <div className={`${isTexto ? 'text-sm' : ''}`}>
+                      <MensagemConteudo msg={msg} numero={informacao.numero} />
+                    </div>
+                  </div>
                 </div>
-              </div>
             );
           })}
         

@@ -6,7 +6,6 @@ const { Usuario } = require('../models');
 async function loginUsuario(req, res) {
     try {
         const { email, senha } = req.body;
-        console.log(email, senha);
 
         const user = await Usuario.findOne({ where: { email } });
 

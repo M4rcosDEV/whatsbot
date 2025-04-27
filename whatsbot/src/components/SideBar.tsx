@@ -61,7 +61,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className={`h-screen ${poppins.className} `}>
+    <aside className={`h-[92vh] md:h-screen ${poppins.className} `}>
       <nav className="h-full flex flex-col bg-[#007bff] text-white border-r shadow-md rounded-tr-sm rounded-br-md">
         {/* Topo */}
           <div className="p-4 pb-2 flex justify-between items-center">

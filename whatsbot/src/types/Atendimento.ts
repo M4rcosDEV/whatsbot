@@ -1,12 +1,12 @@
 export type Mensagem = {
   de: "cliente" | "atendente";
-  tipo: "chat" | "image" | "video" | "audio" | "document" | "sticker"; // etc
+  tipo: "chat" | "image" | "video" | "audio" | "document" | "sticker" | 'ptt'; // etc
   timestamp: number;
   atendimento_id: number;
   conteudo: 
     | string
     | {
-        id: string;
+        id: number;
         mimetype: string;
         filename: string;
         hasMedia: true;

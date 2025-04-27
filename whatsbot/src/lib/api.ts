@@ -3,7 +3,7 @@ import axios from 'axios';
 import router from 'next/router';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001', // URL do seu backend
+  baseURL: 'http://10.0.2.111:3001', // URL do seu backend
   withCredentials: true, // para permitir envio/recebimento de cookies
 });
 

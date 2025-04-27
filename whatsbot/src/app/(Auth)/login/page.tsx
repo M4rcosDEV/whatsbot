@@ -9,6 +9,7 @@ import LoginLayout from '../layout';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Eye, EyeClosed, EyeOff } from 'lucide-react';
 import { log } from '@/lib/log';
+import ViewportSize from "@/components/ViewportSize";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -45,54 +46,52 @@ export default function LoginPage() {
 
   };
 
-  const handleMouseDown = () => {
-    setShowSenha(true);
-    log('aqui')
-  }
+  const handleMouseDown = () => setShowSenha(true);
   const handleMouseUp = () => setShowSenha(false);
   const handleMouseLeave = () => setShowSenha(false);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br p-4">
+      <ViewportSize />
       <div className="w-full max-w-4xl bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden">
         <div className="flex flex-col md:flex-row">
           {/* Lado esquerdo com logo */}
-          <div className="w-full md:w-2/5 bg-blue-950/90 p-8 flex flex-col items-center justify-center">
-            <div className="flex flex-col items-center space-y-6">
+          <div className="w-full md:w-2/5 bg-blue-950/90 p-3 md:p-8 flex flex-col items-center justify-center min-h-40 md:min-h-0">
+            <div className="flex flex-col items-center space-y-1 md:space-y-6">
               <Image
                 src="/logo-topsoft.png"
                 alt="Top Soft Logo"
                 width={120}
                 height={120}
                 priority
-                className="filter brightness-110"
+                className="w-20 h-20 sm:w-28 sm:h-28 filter brightness-110"
               />
               <h2 className="text-3xl font-bold text-center text-white">
                 Top Soft<br />Atividades
               </h2>
-              <p className="text-white/80 text-center text-sm">
+              <p className="hidden sm:block text-white/80 text-center text-sm">
                 Gerencie suas atividades de forma eficiente
               </p>
             </div>
           </div>
 
           {/* Lado direito com formulário */}
-          <div className="w-full md:w-3/5 p-8 md:p-12">
-            <div className="flex flex-col space-y-6">
+          <div className="w-full md:w-3/5 p-4 md:p-12">
+            <div className="flex flex-col space-y-4">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Bem-vindo de volta!</h1>
+                <h1 className="text-3xl font-bold text-white">Bem-vindo de volta!</h1>
                 <p className="text-white/80">
                   Faça login para acessar sua conta
                 </p>
               </div>
 
               {erro && (
-                <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-red-500/20 border border-red-500 text-red-200  px-4 py-3 rounded-lg text-sm">
                   {erro}
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-2">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-white/90 text-sm font-medium">
                     E-mail
@@ -130,7 +129,6 @@ export default function LoginPage() {
                         className="absolute top-1/2 cursor-pointer right-4 -translate-y-1/2 text-white/70 hover:text-white"
                       >
                         {showSenha ? <Eye size={20} /> : <EyeOff size={20} />}
-                        {/* showSenha ? <Eye size={20} /> : <EyeClosed size={20} */}
                       </button>
                   </div>
                 </div>
