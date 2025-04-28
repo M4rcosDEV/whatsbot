@@ -8,7 +8,7 @@ export default function SPALayout({
   return (
     <div className="flex h-[92vh] sm:h-screen">
       <Sidebar />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-x-auto overflow-y-auto">
         {children}
       </main>
     </div>
